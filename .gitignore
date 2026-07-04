@@ -1,0 +1,7 @@
+build/
+reports/*.dat
+reports/*.info
+reports/*.log
+*.vcd
+*.fst
+__pycache__/

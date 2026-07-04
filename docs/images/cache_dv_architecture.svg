@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420">
+  <defs>
+    <style>
+      .box{fill:#f7f3e8;stroke:#162a36;stroke-width:3;rx:14}.accent{fill:#d9ead3}.bus{fill:#d8e8f2}.dv{fill:#f2d8c7}
+      .title{font:700 24px Georgia,serif;fill:#162a36}.text{font:17px Georgia,serif;fill:#263943}.arrow{stroke:#c25432;stroke-width:4;marker-end:url(#a)}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#c25432"/></marker>
+  </defs>
+  <rect width="1200" height="420" fill="#fbfaf6"/>
+  <text x="40" y="48" class="title">AXI4 L1 Data Cache: RTL and Verification Boundaries</text>
+  <rect x="45" y="105" width="190" height="105" class="box accent"/><text x="83" y="145" class="title">CPU Agent</text><text x="68" y="178" class="text">loads, stores, IDs</text>
+  <rect x="320" y="82" width="310" height="155" class="box"/><text x="370" y="125" class="title">2-Way L1 D-Cache</text><text x="354" y="160" class="text">tags + valid + dirty + LRU</text><text x="354" y="190" class="text">evict, refill, replay, parity</text>
+  <rect x="715" y="105" width="210" height="105" class="box bus"/><text x="770" y="145" class="title">AXI4</text><text x="742" y="178" class="text">4-beat bursts</text>
+  <rect x="995" y="105" width="165" height="105" class="box accent"/><text x="1022" y="145" class="title">Memory</text><text x="1012" y="178" class="text">stalls + errors</text>
+  <line x1="235" y1="157" x2="315" y2="157" class="arrow"/><line x1="630" y1="157" x2="710" y2="157" class="arrow"/><line x1="925" y1="157" x2="990" y2="157" class="arrow"/>
+  <rect x="265" y="290" width="670" height="90" class="box dv"/><text x="300" y="328" class="title">Verification Environment</text><text x="300" y="357" class="text">UVM monitors + SVA + C++ model + scoreboards + coverage + mutation tests</text>
+  <line x1="475" y1="285" x2="475" y2="242" class="arrow"/>
+</svg>
+

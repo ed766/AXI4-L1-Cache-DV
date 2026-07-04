@@ -1,0 +1,5 @@
+bug,test,status,log
+CACHE_BUG_DIRTY_SKIP,dirty_evict,DETECTED,reports/bug_cache_bug_dirty_skip.log
+CACHE_BUG_LRU_INVERT,dirty_evict,DETECTED,reports/bug_cache_bug_lru_invert.log
+CACHE_BUG_REFILL_ERROR_IGNORE,read_error,DETECTED,reports/bug_cache_bug_refill_error_ignore.log
+CACHE_BUG_WLAST_EARLY,dirty_evict,DETECTED,reports/bug_cache_bug_wlast_early.log

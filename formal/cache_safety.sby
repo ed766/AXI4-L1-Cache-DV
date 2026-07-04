@@ -1,0 +1,16 @@
+[options]
+mode prove
+depth 40
+
+[engines]
+smtbmc boolector
+
+[script]
+read -formal -D SYNTHESIS ../rtl/dcache_pkg.sv ../rtl/l1_dcache_top.sv cache_formal_harness.sv
+prep -top cache_formal_harness
+
+[files]
+../rtl/dcache_pkg.sv
+../rtl/l1_dcache_top.sv
+cache_formal_harness.sv
+
