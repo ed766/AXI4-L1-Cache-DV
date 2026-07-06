@@ -16,10 +16,12 @@ rows = []
 for define, test in bugs:
     build = ROOT / "build" / "bugs" / define.lower()
     build.mkdir(parents=True, exist_ok=True)
-    cmd = ["verilator", "--binary", "--sv", "--timing", "--assert", "-Wno-fatal",
+    cmd = ["verilator", "--binary", "--sv", "--timing", "--assert", "-Wall",
+           "-Wno-UNUSEDSIGNAL", "-Wno-BLKSEQ", "-Wno-SYNCASYNCNET",
            f"+define+{define}", "--top-module", "tb_l1_dcache", "--Mdir", str(build),
            str(ROOT / "rtl/dcache_pkg.sv"), str(ROOT / "rtl/l1_dcache_top.sv"),
            str(ROOT / "sim/assertions/dcache_protocol_assertions.sv"),
+           str(ROOT / "sim/monitors/dcache_trace_observer.sv"),
            str(ROOT / "sim/tb_l1_dcache.sv")]
     compiled = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     detected = False
@@ -34,7 +36,7 @@ for define, test in bugs:
     rows.append({"bug": define, "test": test, "status": "DETECTED" if detected else "MISSED",
                  "log": str(log_path.relative_to(ROOT))})
 with (REPORTS / "bug_validation.csv").open("w", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=rows[0].keys()); writer.writeheader(); writer.writerows(rows)
+    writer = csv.DictWriter(handle, fieldnames=rows[0].keys(), lineterminator="\n"); writer.writeheader(); writer.writerows(rows)
 detected = sum(row["status"] == "DETECTED" for row in rows)
 print(f"BUG_VALIDATION|detected={detected}|total={len(rows)}")
 raise SystemExit(0 if detected == len(rows) else 1)

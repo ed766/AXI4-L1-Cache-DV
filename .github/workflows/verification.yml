@@ -6,12 +6,36 @@ on:
   workflow_dispatch:
 
 jobs:
-  verilator:
+  quick:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3
-      - name: Lint, model, and regression
-        run: make project-check
+      - name: Warning-clean lint
+        run: make lint
+      - name: Reference model and directed regression
+        run: make model-test regress
 
+  release-evidence:
+    needs: quick
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 zlib1g-dev
+      - name: Run complete release evidence
+        run: make release-check
+      - name: Verify generated reports are reproducible
+        run: git diff --exit-code
+      - name: Upload curated verification reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-verification-reports
+          path: |
+            reports/*.csv
+            reports/*.md
+            docs/performance.md
+            docs/coverage.md
+            docs/cross_coverage.md
+            docs/images/*debug.svg

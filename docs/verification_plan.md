@@ -9,14 +9,16 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Layer | Purpose | Current command |
 | --- | --- | --- |
 | Directed/random SV | Fast executable behavior and protocol checks | `make regress` |
-| UVM compile collateral | Reusable sequence/driver/monitor/TLM architecture | `make uvm-compile` |
-| UVM runtime probe | Environment-dependent phase execution, not a closure gate | `make uvm-smoke` |
-| C++ model | Independent cache and backing-memory prediction | `make model-test` |
+| C++ trace replay | Independent response, replacement, AXI, and memory prediction | `make model-trace-check` |
 | Assertions | Temporal and accounting invariants | enabled by regression |
 | Formal | Solver-backed safety and reachability | `make formal` |
 | Functional coverage | Feature-intent evidence | `make functional-coverage` |
+| Interaction coverage | Same-window cache-specific crosses | `make cache-cross-coverage` |
+| Performance | Per-request latency and throughput sweeps | `make performance-sweep` |
 | Code coverage | RTL execution evidence | `make coverage` |
 | Mutation tests | Checker sensitivity | `make bug-validate` |
+| Debug waveform | Expected-failure FST and deterministic SVG evidence | `make debug-waveform` |
+| Optional UVM compile | Secondary methodology collateral, not closure | `make uvm-compile` |
 
 ## Required Scenario Families
 
@@ -25,15 +27,16 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - AXI: independent channel backpressure, read/write response errors, burst stability.
 - Maintenance: flush, invalidate, flush-invalidate, dirty-line writeback failure.
 - Reset: idle, refill, writeback, maintenance.
-- Random: conflicting addresses, operation mix, delays, errors, and reproducible seeds.
+- Random: manifest-driven operation mix, address distributions, conflicts, strobes, stalls, errors, reset timing, and reproducible seeds.
 
 ## Release Targets
 
 - All deterministic and required random tests pass.
 - Required functional bins and mandatory crosses close.
-- C++ model reports no response or backing-memory mismatch.
-- Reviewed code coverage reaches 95% line, 85% branch/expression, and 90% toggle.
-- Formal safety proofs pass and cover traces demonstrate non-vacuous reachability.
+- C++ trace model reports no response, lookup, AXI, eviction, or backing-memory mismatch.
+- Cache interaction coverage closes at `55 / 55`; feature coverage separately includes explicit read/write hit/miss and clean/dirty replacement scenarios.
+- Code coverage reports raw values and reviewed exclusions without manufacturing activity for cache-array bits.
+- Formal remains optional until a solver-backed run is available; it is not part of release closure.
 - Every implemented bug mutation is detected by a test, assertion, or scoreboard.
 
 Current results must be read from generated reports; targets are not presented as completed results.

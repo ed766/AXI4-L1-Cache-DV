@@ -1,13 +1,14 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage functional-coverage performance stress-manifest stress bug-validate model-test formal uvm-check-env uvm-compile uvm-smoke project-check clean
+.PHONY: lint smoke regress coverage functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform docs-check model-test model-trace-check formal uvm-check-env uvm-compile uvm-smoke project-check release-check clean
 
 lint:
-	$(VERILATOR) --lint-only --sv --timing --assert -Wall -Wno-fatal \
+	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
 		-Wno-UNUSEDSIGNAL -Wno-BLKSEQ -Wno-SYNCASYNCNET \
 		rtl/dcache_pkg.sv rtl/l1_dcache_top.sv \
-		sim/assertions/dcache_protocol_assertions.sv sim/tb_l1_dcache.sv
+		sim/assertions/dcache_protocol_assertions.sv \
+		sim/monitors/dcache_trace_observer.sv sim/tb_l1_dcache.sv
 
 smoke:
 	$(PYTHON) scripts/run_regression.py --tests smoke
@@ -22,8 +23,14 @@ coverage:
 functional-coverage: regress
 	$(PYTHON) scripts/gen_coverage_report.py
 
-performance: regress
-	$(PYTHON) scripts/gen_performance_report.py
+performance: performance-sweep
+
+performance-sweep: regress
+	$(PYTHON) scripts/run_performance_sweep.py
+
+cache-cross-coverage: regress performance-sweep
+	$(PYTHON) scripts/run_cross_scenarios.py
+	$(PYTHON) scripts/gen_cross_coverage.py
 
 stress-manifest:
 	$(PYTHON) scripts/gen_stress_manifest.py --count 100
@@ -31,8 +38,20 @@ stress-manifest:
 stress: regress stress-manifest
 	$(PYTHON) scripts/run_stress.py
 
+random-stress: stress
+	$(PYTHON) scripts/run_model_trace.py --traces 'stress_*.csv'
+
+model-trace-check: regress
+	$(PYTHON) scripts/run_model_trace.py --summary reports/regress_summary.csv
+
 bug-validate:
 	$(PYTHON) scripts/run_bug_validation.py
+
+debug-waveform:
+	$(PYTHON) scripts/gen_debug_waveform.py
+
+docs-check:
+	$(PYTHON) scripts/check_docs.py
 
 model-test:
 	mkdir -p build/model
@@ -52,8 +71,13 @@ uvm-compile: uvm-check-env
 uvm-smoke: uvm-check-env
 	$(PYTHON) scripts/run_uvm.py
 
-project-check: lint model-test regress functional-coverage performance stress-manifest
+project-check: lint model-test regress model-trace-check functional-coverage performance stress-manifest
 	$(PYTHON) scripts/gen_metrics.py
+
+release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage
+	$(PYTHON) scripts/run_model_trace.py --traces '*.csv'
+	$(PYTHON) scripts/gen_metrics.py
+	$(PYTHON) scripts/check_docs.py
 
 clean:
 	rm -rf build

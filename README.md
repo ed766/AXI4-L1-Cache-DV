@@ -8,21 +8,22 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 
 | Evidence | Current result |
 | --- | ---: |
-| Directed/random Verilator scenarios | `17 / 17` passing |
-| Functional coverage points | `18 / 18` observed |
+| Directed/random Verilator scenarios | `22 / 22` passing |
+| Functional coverage points | `21 / 21` observed |
 | Compile-time bug mutations | `4 / 4` detected |
-| Optional seeded stress executions | `100 / 100` passing |
+| Manifest-driven stress executions | `100 / 100` passing |
+| C++ trace-replay checks | `127 / 127` generated traces passing |
+| Cache interaction cross coverage | `55 / 55` bins observed |
+| Named protocol/architecture assertions | `18` |
+| Waveform-backed debug cases | `1 / 1` reproduced |
 | Raw design line coverage | `86.84%` |
 | Reviewed design line coverage | `100.00%` |
 | Design branch coverage | `98.21%` |
-| Raw design toggle coverage | `50.57%` |
+| Raw design toggle coverage | `59.49%` |
 | Independent C++ model self-test | `PASS` |
-| Full UVM environment | Compile/elaboration `PASS`; runtime under validation |
 | Solver-backed formal | Harness ready; not run locally |
 
-The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md).
-
-Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims are intentionally separated from release targets that have not yet closed.
+The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
 
 ## Architecture
 
@@ -34,7 +35,7 @@ flowchart LR
     CTRL --> AXI["AXI4 master\n64-bit, four-beat INCR bursts"]
     AXI <--> MEM["Reactive backing memory\nbackpressure and errors"]
     MAINT["Flush / invalidate"] --> CTRL
-    MON["UVM + directed monitors\nSVA + C++ reference model"] -.-> CACHE
+    MON["SV observer + trace replay\nSVA + C++ reference model"] -.-> CACHE
 ```
 
 ![Cache verification architecture](docs/images/cache_dv_architecture.svg)
@@ -61,13 +62,16 @@ The AXI interface is deliberately constrained to one outstanding transaction, fi
 ```bash
 make smoke          # fast cold-miss/hit/store path
 make project-check  # lint, C++ model, regression, coverage/report generation
+make release-check  # stress, trace replay, crosses, performance, mutations, code coverage
+make model-trace-check
+make cache-cross-coverage
+make performance-sweep
 make bug-validate   # expected-failure mutation checks
-make uvm-compile    # compile full UVM collateral with the external UVM-capable tool
-make uvm-smoke      # bounded runtime probe; not currently a closure claim
+make debug-waveform # FST plus deterministic assertion-debug SVG
 make formal         # runs when SymbiYosys is installed
 ```
 
-The default local flow uses the system Verilator. The optional UVM lane currently compiles with a sibling Verilator `5.043` development build and `uvm-verilator`; override these with `VERILATOR_UVM` and `UVM_HOME`.
+The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains as secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`, and runtime is not claimed.
 
 ## Reviewer Path
 
@@ -77,15 +81,26 @@ For a focused design-verification review:
 2. Use the [verification traceability matrix](docs/traceability.md) to map requirements to stimulus, checkers, assertions, and coverage.
 3. Read the [cache architecture](docs/architecture.md) for hit, eviction, refill, writeback, and maintenance behavior.
 4. Review the [bug diary](docs/bug_diary.md) for four implemented mutation/debug cases.
-5. Inspect [functional and code coverage](docs/coverage.md) and [performance characterization](docs/performance.md).
-6. Check [UVM status](docs/uvm_status.md) and [formal status](docs/formal.md) for explicit tool and execution boundaries.
+5. Follow the [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
+6. Inspect [functional and code coverage](docs/coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
+7. Check [UVM status](docs/uvm_status.md) and [formal status](docs/formal.md) for explicit tool and execution boundaries.
+
+## Verification Bar
+
+| Evidence | Implementation |
+| --- | --- |
+| Directed access matrix | Named read hit/miss, write hit/miss, clean/dirty eviction, and reset-recovery tests |
+| AXI and memory checking | Reactive four-beat AXI model plus independent C++ trace replay and final-memory comparison |
+| Assertions | Named CPU, AXI, replacement, maintenance, error-containment, and reset properties |
+| Random and coverage | 100 reproducible manifest scenarios, feature coverage, and same-window interaction crosses |
+| Debug and automation | Four mutation detections, FST/SVG case study, GitHub Actions, and `make release-check` |
 
 ## Verification Structure
 
-- Directed and seeded-random SystemVerilog bench for fast executable closure.
-- UVM CPU agent, reactive AXI memory component, monitor, scoreboard, and constrained sequence.
-- C++ reference model with a DPI-compatible C API and independent unit tests.
-- Named assertions for response accounting and ready/valid stability.
+- Directed and manifest-driven SystemVerilog stimulus with every random knob applied through plusargs.
+- Bound event observer and independent C++ trace replay for responses, replacement, AXI bursts, errors, resets, maintenance, and backing memory.
+- Named protocol and architecture assertions for fault containment, ordering, replacement, and maintenance exclusion.
+- Non-gating UVM CPU agent, memory component, monitor, scoreboard, and sequence source retained as optional collateral.
 - Formal harness for response-count, mutual-exclusion, and refill/eviction reachability properties.
 - Generated regression, functional-coverage, mutation, performance, and metrics artifacts.
 

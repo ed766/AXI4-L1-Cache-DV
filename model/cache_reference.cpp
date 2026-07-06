@@ -37,7 +37,11 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
   const bool aligned = size <= 2 &&
       (size == 0 || (size == 1 && !(address & 1)) ||
        (size == 2 && !(address & 3)));
-  if (!aligned) return {0, true, false, false};
+  if (!aligned) {
+    Response result;
+    result.error = true;
+    return result;
+  }
 
   const unsigned set = (address >> 5) & 0x3f;
   const unsigned word = (address >> 2) & 0x7;
@@ -49,11 +53,19 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
 
   const bool hit = way >= 0;
   bool eviction = false;
+  Response response;
+  response.hit = hit;
+  response.prior_lru = lru_[set];
+  response.refill_base = address & ~0x1fu;
   if (!hit) {
     if (!lines_[set][0].valid) way = 0;
     else if (!lines_[set][1].valid) way = 1;
     else way = lru_[set];
     Line& victim = lines_[set][way];
+    response.victim_valid = victim.valid;
+    response.victim_dirty = victim.dirty;
+    response.victim_base = ((victim.tag << 6) | set) << 5;
+    response.victim_words = victim.words;
     if (victim.valid && victim.dirty) {
       writeback(set, way);
       eviction = true;
@@ -67,6 +79,8 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
   }
 
   Line& line = lines_[set][way];
+  response.way = static_cast<unsigned>(way);
+  response.eviction = eviction;
   uint32_t result = line.words[word];
   if (write) {
     for (unsigned byte = 0; byte < 4; ++byte) {
@@ -80,14 +94,20 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
     result = 0;
   }
   lru_[set] = static_cast<uint8_t>(1 - way);
-  return {result, false, hit, eviction};
+  response.data = result;
+  return response;
 }
 
 bool CacheReference::flush(bool invalidate) {
+  return maintenance(invalidate ? 2 : 0);
+}
+
+bool CacheReference::maintenance(uint8_t command) {
   for (unsigned set = 0; set < kSets; ++set) {
     for (unsigned way = 0; way < kWays; ++way) {
-      if (lines_[set][way].valid && lines_[set][way].dirty) writeback(set, way);
-      if (invalidate) lines_[set][way].valid = false;
+      if (command != 1 && lines_[set][way].valid && lines_[set][way].dirty)
+        writeback(set, way);
+      if (command != 0) lines_[set][way].valid = false;
     }
   }
   return true;
@@ -110,4 +130,3 @@ uint64_t cache_ref_access(void* handle, uint32_t address, uint32_t write,
          (static_cast<uint64_t>(result.eviction) << 34);
 }
 }
-

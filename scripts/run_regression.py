@@ -11,7 +11,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build" / "verilator"
 REPORTS = ROOT / "reports"
-DEFAULT_TESTS = ["smoke", "dirty_evict", "backpressure", "read_error", "write_error",
+DEFAULT_TESTS = ["smoke", "read_miss", "read_hit", "write_miss", "write_hit",
+                 "clean_evict", "dirty_evict", "backpressure", "read_error", "write_error",
                  "byte_strobes", "misaligned", "maintenance", "random"]
 DEFAULT_TESTS += ["flush_only", "invalidate_only", "response_backpressure", "reset_mid_refill"]
 DEFAULT_TESTS += ["axi_channel_waits", "maintenance_error", "maintenance_final_dirty"]
@@ -54,12 +55,13 @@ def main() -> int:
         mode_args = ["--cc", "--exe", "--build"]
         extra_sources = [str(coverage_main)]
     compile_cmd = [
-        args.verilator, *mode_args, "--sv", "--timing", "--assert", "-Wall", "-Wno-fatal",
+        args.verilator, *mode_args, "--sv", "--timing", "--assert", "-Wall",
         "-Wno-UNUSEDSIGNAL", "-Wno-BLKSEQ", "-Wno-SYNCASYNCNET",
         "--top-module", "tb_l1_dcache", "--Mdir", str(BUILD),
         str(ROOT / "rtl" / "dcache_pkg.sv"),
         str(ROOT / "rtl" / "l1_dcache_top.sv"),
         str(ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv"),
+        str(ROOT / "sim" / "monitors" / "dcache_trace_observer.sv"),
         str(ROOT / "sim" / "tb_l1_dcache.sv"),
         *extra_sources,
     ]
@@ -76,7 +78,12 @@ def main() -> int:
         coverage_path = ROOT / "coverage.dat"
         if coverage_path.exists():
             coverage_path.unlink()
-        result = run([str(binary), f"+TEST={test}"], cwd=ROOT, capture_output=True)
+        trace_dir = BUILD / "traces"
+        trace_dir.mkdir(exist_ok=True)
+        result = run([str(binary), f"+TEST={test}",
+                      "+MODEL_FINAL_FLUSH",
+                      f"+TRACE_FILE={trace_dir / (test + '.csv')}"],
+                     cwd=ROOT, capture_output=True)
         output = result.stdout + result.stderr
         log_path.write_text(output)
         match = pattern.search(output)
@@ -94,7 +101,7 @@ def main() -> int:
 
     columns = ["test", "status", "requests", "responses", "hits", "misses", "evictions", "errors", "cycles", "log"]
     with (REPORTS / "regress_summary.csv").open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

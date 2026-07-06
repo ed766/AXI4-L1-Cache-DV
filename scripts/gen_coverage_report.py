@@ -7,8 +7,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 summary_path = ROOT / "reports" / "regress_summary.csv"
 rows = {row["test"]: row for row in csv.DictReader(summary_path.open())}
 points = [
-    ("cold_miss_refill", "smoke", lambda r: int(r["misses"]) >= 1),
-    ("load_after_refill_hit", "smoke", lambda r: int(r["hits"]) >= 1),
+    ("cold_miss_refill", "read_miss", lambda r: int(r["misses"]) >= 1),
+    ("load_after_refill_hit", "read_hit", lambda r: int(r["hits"]) >= 1),
+    ("write_miss_allocate", "write_miss", lambda r: int(r["misses"]) >= 1),
+    ("write_hit_no_axi", "write_hit", lambda r: int(r["hits"]) >= 2),
+    ("clean_eviction_no_writeback", "clean_evict", lambda r: int(r["misses"]) >= 3),
     ("dirty_eviction_writeback", "dirty_evict", lambda r: int(r["evictions"]) >= 1),
     ("axi_channel_backpressure", "backpressure", lambda r: r["status"] == "PASS"),
     ("axi_read_error_propagation", "read_error", lambda r: int(r["errors"]) >= 1),
@@ -33,20 +36,23 @@ for name, test, predicate in points:
                           "status": "COVERED" if observed else "MISSING"})
 out = ROOT / "reports" / "functional_coverage.csv"
 with out.open("w", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=coverage_rows[0].keys())
+    writer = csv.DictWriter(handle, fieldnames=coverage_rows[0].keys(), lineterminator="\n")
     writer.writeheader(); writer.writerows(coverage_rows)
 covered = sum(row["status"] == "COVERED" for row in coverage_rows)
 doc = "# Functional Coverage\n\n"
-doc += "This initial executable coverage model is separate from Verilator code coverage.\n\n"
+doc += ("This trace/event-derived feature model is separate from Verilator code coverage "
+        "and is not presented as simulator covergroup coverage.\n\n")
 doc += "| Coverage point | Source test | Status |\n| --- | --- | --- |\n"
 for row in coverage_rows:
     doc += f"| `{row['coverage_point']}` | `{row['source_test']}` | {row['status']} |\n"
-doc += f"\nCurrent baseline: **{covered} / {len(coverage_rows)}**. The release target expands this model before claiming closure.\n"
+doc += f"\nCurrent release result: **{covered} / {len(coverage_rows)}** covered.\n"
 doc += """
 
 ## Code Coverage Interpretation
 
 Native Verilator coverage is reported separately in `reports/code_coverage.md`. The current suite reaches all reviewed executable lines and nearly all branch points. Raw toggle coverage remains materially lower because it includes cache-array storage bits, fixed AXI burst constants, and address bits outside the bounded testbench memory window. Those raw values remain visible; only storage-array toggle points and non-executable assertion/default lines are excluded from reviewed summaries.
+
+Cache-specific same-window interaction coverage is reported separately in `docs/cross_coverage.md`; it does not inflate the feature vector above.
 """
 (ROOT / "docs" / "coverage.md").write_text(doc)
 print(f"FUNCTIONAL_COVERAGE|covered={covered}|total={len(coverage_rows)}")

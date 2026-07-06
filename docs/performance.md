@@ -1,31 +1,42 @@
-# Behavioral Performance Characterization
+# Per-Request Performance Characterization
 
-Cycle counts are Verilator behavioral measurements and include test setup. They are useful for relative comparison, not silicon timing claims.
+These are behavioral Verilator cycle measurements, not silicon timing results. Latency runs from accepted request or maintenance command through accepted completion.
 
-| Scenario | Requests | Hits | Misses | Evictions | Total cycles | Cycles/request |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `smoke` | 4 | 4 | 1 | 0 | 33 | 8.2 |
-| `dirty_evict` | 3 | 3 | 3 | 1 | 58 | 19.3 |
-| `backpressure` | 3 | 3 | 3 | 1 | 70 | 23.3 |
-| `read_error` | 2 | 1 | 2 | 0 | 37 | 18.5 |
-| `write_error` | 4 | 3 | 3 | 1 | 50 | 12.5 |
-| `byte_strobes` | 3 | 3 | 1 | 0 | 30 | 10.0 |
-| `misaligned` | 2 | 1 | 1 | 0 | 27 | 13.5 |
-| `maintenance` | 2 | 2 | 2 | 0 | 174 | 87.0 |
-| `random` | 100 | 100 | 30 | 0 | 640 | 6.4 |
-| `flush_only` | 2 | 2 | 1 | 0 | 163 | 81.5 |
-| `invalidate_only` | 2 | 2 | 2 | 0 | 168 | 84.0 |
-| `response_backpressure` | 1 | 1 | 1 | 0 | 30 | 30.0 |
-| `reset_mid_refill` | 1 | 1 | 2 | 0 | 34 | 34.0 |
-| `axi_channel_waits` | 4 | 4 | 4 | 1 | 84 | 21.0 |
-| `maintenance_error` | 1 | 1 | 1 | 0 | 160 | 160.0 |
-| `maintenance_final_dirty` | 2 | 2 | 2 | 0 | 180 | 90.0 |
-| `maintenance_channel_waits` | 2 | 2 | 2 | 0 | 192 | 96.0 |
+| Backpressure | Class | Samples | Mean | p50 | p95 | Max | Throughput | Observed stall fraction |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0% | `clean-miss` | 47 | 13.00 | 13 | 13 | 13 | 0.0509 | 0.0000 |
+| 0% | `dirty-miss` | 46 | 19.00 | 19 | 19 | 19 | 0.0509 | 0.0000 |
+| 0% | `hit` | 10 | 2.00 | 2 | 2 | 2 | 0.0509 | 0.0000 |
+| 0% | `maintenance-flush` | 1 | 141.00 | 141 | 141 | 141 | 0.0509 | 0.0000 |
+| 0% | `maintenance-flush-invalidate` | 1 | 135.00 | 135 | 135 | 135 | 0.0509 | 0.0000 |
+| 0% | `maintenance-invalidate` | 1 | 129.00 | 129 | 129 | 129 | 0.0509 | 0.0000 |
+| 25% | `clean-miss` | 47 | 14.96 | 15 | 16 | 16 | 0.0453 | 0.1562 |
+| 25% | `dirty-miss` | 46 | 22.26 | 23 | 23 | 23 | 0.0453 | 0.1562 |
+| 25% | `hit` | 10 | 2.00 | 2 | 2 | 2 | 0.0453 | 0.1562 |
+| 25% | `maintenance-flush` | 1 | 146.00 | 146 | 146 | 146 | 0.0453 | 0.1562 |
+| 25% | `maintenance-flush-invalidate` | 1 | 136.00 | 136 | 136 | 136 | 0.0453 | 0.1562 |
+| 25% | `maintenance-invalidate` | 1 | 129.00 | 129 | 129 | 129 | 0.0453 | 0.1562 |
+| 50% | `clean-miss` | 47 | 17.04 | 18 | 18 | 18 | 0.0401 | 0.2976 |
+| 50% | `dirty-miss` | 46 | 26.43 | 26 | 29 | 29 | 0.0401 | 0.2976 |
+| 50% | `hit` | 10 | 2.00 | 2 | 2 | 2 | 0.0401 | 0.2976 |
+| 50% | `maintenance-flush` | 1 | 151.00 | 151 | 151 | 151 | 0.0401 | 0.2976 |
+| 50% | `maintenance-flush-invalidate` | 1 | 138.00 | 138 | 138 | 138 | 0.0401 | 0.2976 |
+| 50% | `maintenance-invalidate` | 1 | 129.00 | 129 | 129 | 129 | 0.0401 | 0.2976 |
+| 75% | `clean-miss` | 47 | 23.47 | 23 | 26 | 29 | 0.0280 | 0.5361 |
+| 75% | `dirty-miss` | 46 | 43.41 | 45 | 45 | 48 | 0.0280 | 0.5361 |
+| 75% | `hit` | 10 | 2.00 | 2 | 2 | 2 | 0.0280 | 0.5361 |
+| 75% | `maintenance-flush` | 1 | 169.00 | 169 | 169 | 169 | 0.0280 | 0.5361 |
+| 75% | `maintenance-flush-invalidate` | 1 | 148.00 | 148 | 148 | 148 | 0.0280 | 0.5361 |
+| 75% | `maintenance-invalidate` | 1 | 129.00 | 129 | 129 | 129 | 0.0280 | 0.5361 |
 
 
-## Current Observations
+## Interpretation
 
-- A warm hit avoids the four-beat AXI refill required by a cold miss.
-- Dirty conflict replacement adds a complete four-beat writeback before refill.
-- Independent AXI ready throttling increases service time without changing architectural results.
-- The report is an initial baseline; percentile latency and duty-cycle sweeps remain release work.
+- Hit latency isolates cache-controller service without an AXI refill.
+- Clean misses include a four-beat refill; dirty misses add a four-beat writeback and response first.
+- Backpressure duty is applied deterministically to all AXI channels and reported from observed stalled-valid cycles.
+- Maintenance latency includes the complete set/way scan and any required writebacks.
+
+## Visual Summary
+
+![Latency and throughput versus AXI backpressure](images/performance_latency.svg)

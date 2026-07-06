@@ -1,6 +1,9 @@
 coverage_point,source_test,status
-cold_miss_refill,smoke,COVERED
-load_after_refill_hit,smoke,COVERED
+cold_miss_refill,read_miss,COVERED
+load_after_refill_hit,read_hit,COVERED
+write_miss_allocate,write_miss,COVERED
+write_hit_no_axi,write_hit,COVERED
+clean_eviction_no_writeback,clean_evict,COVERED
 dirty_eviction_writeback,dirty_evict,COVERED
 axi_channel_backpressure,backpressure,COVERED
 axi_read_error_propagation,read_error,COVERED

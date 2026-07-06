@@ -29,4 +29,4 @@ Only compile-time mutations present in RTL are listed.
 - **Failure:** writeback terminates before all four cache-line beats are transferred.
 - **Detection:** the AXI memory checker flags the wrong final-beat position and dirty data is incomplete.
 - **Engineering relevance:** demonstrates burst-protocol and end-to-end memory checking.
-
+- **Debug evidence:** [waveform-driven case study](debug_case_study.md).

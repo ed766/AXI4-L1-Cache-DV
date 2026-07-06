@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360">
+<rect width="960" height="360" fill="#f7f3ea"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#18211d">
+  <text x="40" y="28" font-size="18" font-weight="700">Cache latency and throughput under AXI backpressure</text>
+  <text x="40" y="52" font-size="12">Behavioral Verilator measurements; p95 request latency and accepted throughput</text>
+  <line x1="65" y1="295" x2="445" y2="295" stroke="#56635d"/><line x1="65" y1="80" x2="65" y2="295" stroke="#56635d"/>
+  <line x1="535" y1="295" x2="915" y2="295" stroke="#56635d"/><line x1="535" y1="80" x2="535" y2="295" stroke="#56635d"/>
+  <text x="65" y="72" font-size="13" font-weight="700">p95 latency (cycles)</text>
+  <text x="535" y="72" font-size="13" font-weight="700">Throughput (requests/cycle)</text>
+  <polyline fill="none" stroke="#167d6d" stroke-width="3" points="65.0,232.9 191.7,218.6 318.3,209.0 445.0,170.8"/>
+  <polyline fill="none" stroke="#c84b31" stroke-width="3" points="65.0,204.2 191.7,185.1 318.3,156.4 445.0,80.0"/>
+  <polyline fill="none" stroke="#2765a8" stroke-width="3" points="535.0,80.0 661.7,103.7 788.3,125.6 915.0,176.7"/>
+  <text x="78" y="92" font-size="11" fill="#167d6d">clean miss</text><text x="155" y="92" font-size="11" fill="#c84b31">dirty miss</text>
+  <text x="65.0" y="318" text-anchor="middle" font-size="11">0%</text>
+  <text x="191.7" y="318" text-anchor="middle" font-size="11">25%</text>
+  <text x="318.3" y="318" text-anchor="middle" font-size="11">50%</text>
+  <text x="445.0" y="318" text-anchor="middle" font-size="11">75%</text>
+  <text x="535.0" y="318" text-anchor="middle" font-size="11">0%</text>
+  <text x="661.7" y="318" text-anchor="middle" font-size="11">25%</text>
+  <text x="788.3" y="318" text-anchor="middle" font-size="11">50%</text>
+  <text x="915.0" y="318" text-anchor="middle" font-size="11">75%</text>
+  <text x="480" y="345" text-anchor="middle" font-size="11">Requested AXI backpressure</text>
+</g>
+</svg>

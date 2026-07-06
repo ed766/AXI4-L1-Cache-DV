@@ -37,11 +37,24 @@ module tb_l1_dcache;
   l1_dcache_top dut (.*);
 
   logic [31:0] memory [0:65535];
+  logic memory_touched [0:65535];
   logic wr_active, rd_active;
   logic [31:0] wr_addr, rd_addr;
   logic [2:0] wr_beat, rd_beat;
   logic inject_read_error, inject_write_error;
   integer stall_mod = 0;
+  integer bp_percent = 0;
+  integer random_operations = 100;
+  integer random_read_percent = 50;
+  integer random_conflict_percent = 0;
+  integer random_error_percent = 0;
+  integer random_reset_operation = -1;
+  integer random_seed_cfg = 1;
+  integer random_addr_base = 'h4000;
+  integer random_addr_span = 'h4000;
+  string random_reset_phase = "idle";
+  string random_strobe_profile = "full";
+  string random_addr_profile = "uniform";
   integer aw_stall_budget = 0;
   integer w_stall_budget = 0;
   integer ar_stall_budget = 0;
@@ -55,11 +68,26 @@ module tb_l1_dcache;
   integer request_count = 0;
   integer response_count = 0;
   integer error_count = 0;
+  integer axi_aw_handshakes = 0;
+  integer axi_ar_handshakes = 0;
   integer failures = 0;
   integer next_id = 1;
   string test_name;
+  string wave_file;
+  bit model_final_flush = 0;
 
-  wire allow_ready = stall_mod == 0 || (cycle_count % stall_mod) != 0;
+  initial begin
+    if ($value$plusargs("WAVE_FILE=%s", wave_file)) begin
+      $dumpfile(wave_file);
+      $dumpvars(0, tb_l1_dcache);
+    end
+  end
+
+  integer axi_stall_cycles = 0;
+  integer axi_valid_cycles = 0;
+  wire percent_ready = bp_percent == 0 ||
+                       (((cycle_count * 37 + random_seed_cfg) % 100) >= bp_percent);
+  wire allow_ready = (stall_mod == 0 || (cycle_count % stall_mod) != 0) && percent_ready;
   assign m_axi_awready = !wr_active && !m_axi_bvalid && allow_ready && aw_stall_budget == 0;
   assign m_axi_wready = wr_active && allow_ready && w_stall_budget == 0;
   assign m_axi_arready = !rd_active && allow_ready && ar_stall_budget == 0;
@@ -69,6 +97,13 @@ module tb_l1_dcache;
     if (mon_hit) hit_count <= hit_count + 1;
     if (mon_miss) miss_count <= miss_count + 1;
     if (mon_evict) eviction_count <= eviction_count + 1;
+    if (m_axi_awvalid || m_axi_wvalid || m_axi_arvalid || m_axi_rvalid)
+      axi_valid_cycles <= axi_valid_cycles + 1;
+    if (m_axi_awvalid && m_axi_awready) axi_aw_handshakes <= axi_aw_handshakes + 1;
+    if (m_axi_arvalid && m_axi_arready) axi_ar_handshakes <= axi_ar_handshakes + 1;
+    if ((m_axi_awvalid && !m_axi_awready) || (m_axi_wvalid && !m_axi_wready) ||
+        (m_axi_arvalid && !m_axi_arready) || (m_axi_rvalid && !m_axi_rready))
+      axi_stall_cycles <= axi_stall_cycles + 1;
 
     if (!rst_n) begin
       wr_active <= 0;
@@ -108,6 +143,8 @@ module tb_l1_dcache;
       end
 
       if (m_axi_wvalid && m_axi_wready) begin
+        memory_touched[(wr_addr >> 2) + wr_beat*2] <= 1;
+        memory_touched[(wr_addr >> 2) + wr_beat*2 + 1] <= 1;
         for (int byte_idx = 0; byte_idx < 8; byte_idx++) begin
           if (m_axi_wstrb[byte_idx])
             memory[(wr_addr >> 2) + wr_beat*2 + int'(byte_idx >= 4)]
@@ -150,6 +187,8 @@ module tb_l1_dcache;
         m_axi_rvalid <= 1;
       end
       if (m_axi_rvalid && m_axi_rready) begin
+        memory_touched[(rd_addr >> 2) + rd_beat*2] <= 1;
+        memory_touched[(rd_addr >> 2) + rd_beat*2 + 1] <= 1;
         m_axi_rvalid <= 0;
         if (m_axi_rlast) begin
           rd_active <= 0;
@@ -227,6 +266,82 @@ module tb_l1_dcache;
     cpu_access(1, 32'h0000_1000, 32'hdead_beef, 4'hf, 2, ignored, error);
     if (error) failures++;
     expect_read(32'h0000_1000, 32'hdead_beef);
+  endtask
+
+  task automatic run_read_miss;
+    int ar_before = axi_ar_handshakes;
+    int aw_before = axi_aw_handshakes;
+    int miss_before = miss_count;
+    expect_read(32'h0000_4000, memory[32'h4000 >> 2]);
+    if (axi_ar_handshakes != ar_before + 1 || axi_aw_handshakes != aw_before ||
+        miss_count <= miss_before) begin
+      $error("Read miss did not issue exactly one refill burst");
+      failures++;
+    end
+  endtask
+
+  task automatic run_read_hit;
+    int ar_before;
+    int aw_before;
+    int hit_before;
+    expect_read(32'h0000_4400, memory[32'h4400 >> 2]);
+    ar_before = axi_ar_handshakes;
+    aw_before = axi_aw_handshakes;
+    hit_before = hit_count;
+    expect_read(32'h0000_4400, memory[32'h4400 >> 2]);
+    if (axi_ar_handshakes != ar_before || axi_aw_handshakes != aw_before ||
+        hit_count <= hit_before) begin
+      $error("Read hit unexpectedly accessed AXI");
+      failures++;
+    end
+  endtask
+
+  task automatic run_write_miss;
+    logic [31:0] ignored;
+    bit error;
+    int ar_before = axi_ar_handshakes;
+    int aw_before = axi_aw_handshakes;
+    int miss_before = miss_count;
+    cpu_access(1, 32'h0000_4800, 32'hc001_cafe, 4'hf, 2, ignored, error);
+    if (error || axi_ar_handshakes != ar_before + 1 ||
+        axi_aw_handshakes != aw_before || miss_count <= miss_before) begin
+      $error("Write miss did not allocate through one refill burst");
+      failures++;
+    end
+    expect_read(32'h0000_4800, 32'hc001_cafe);
+  endtask
+
+  task automatic run_write_hit;
+    logic [31:0] ignored;
+    bit error;
+    int ar_before;
+    int aw_before;
+    int hit_before;
+    expect_read(32'h0000_4c00, memory[32'h4c00 >> 2]);
+    ar_before = axi_ar_handshakes;
+    aw_before = axi_aw_handshakes;
+    hit_before = hit_count;
+    cpu_access(1, 32'h0000_4c00, 32'h51a7_0bad, 4'hf, 2, ignored, error);
+    expect_read(32'h0000_4c00, 32'h51a7_0bad);
+    if (error || axi_ar_handshakes != ar_before || axi_aw_handshakes != aw_before ||
+        hit_count < hit_before + 2) begin
+      $error("Write-hit path unexpectedly accessed AXI or failed replay");
+      failures++;
+    end
+  endtask
+
+  task automatic run_clean_evict;
+    int ar_before;
+    int aw_before;
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    ar_before = axi_ar_handshakes;
+    aw_before = axi_aw_handshakes;
+    expect_read(32'h0000_8000, memory[32'h8000 >> 2]);
+    if (axi_ar_handshakes != ar_before + 1 || axi_aw_handshakes != aw_before) begin
+      $error("Clean eviction issued an unexpected writeback");
+      failures++;
+    end
   endtask
 
   task automatic run_dirty_evict;
@@ -440,36 +555,213 @@ module tb_l1_dcache;
     end
   endtask
 
+  task automatic reset_between_operations;
+    @(negedge clk); rst_n = 0;
+    repeat (3) @(posedge clk);
+    @(negedge clk); rst_n = 1;
+    repeat (3) @(posedge clk);
+  endtask
+
+  task automatic reset_during_writeback;
+    logic [31:0] ignored;
+    bit error;
+    cpu_access(1, 32'h0000_5000, 32'h1111_0001, 4'hf, 2, ignored, error);
+    expect_read(32'h0000_5800, memory[32'h5800 >> 2]);
+    @(negedge clk);
+    cpu_req_valid = 1;
+    cpu_req_addr = 32'h0000_6000;
+    cpu_req_write = 0;
+    cpu_req_wdata = 0;
+    cpu_req_wstrb = 0;
+    cpu_req_size = 2;
+    cpu_req_id = next_id[7:0];
+    next_id++;
+    do @(posedge clk); while (!cpu_req_ready);
+    @(negedge clk); cpu_req_valid = 0;
+    do @(posedge clk); while (mon_state != 5'd3);
+    reset_between_operations();
+  endtask
+
   task automatic run_random;
-    logic [31:0] model [0:255];
+    logic [31:0] model [int unsigned];
     logic [31:0] actual, data;
     logic [31:0] addr;
+    logic [3:0] strobes;
     bit error;
-    for (int i = 0; i < 256; i++) model[i] = memory[(32'h4000 >> 2) + i];
-    for (int n = 0; n < 100; n++) begin
-      int index = $urandom_range(0, 255);
-      addr = 32'h4000 + index*4;
-      if (bit'($urandom_range(0, 1))) begin
+    int writes = 0;
+    int reads = 0;
+    int conflicts = 0;
+    int injected = 0;
+    int resets = 0;
+    int observed_errors = 0;
+    int full_strobes = 0;
+    int single_strobes = 0;
+    int partial_strobes = 0;
+    int span_words = random_addr_span / 4;
+    void'($urandom(random_seed_cfg));
+    for (int n = 0; n < random_operations; n++) begin
+      int index;
+      bit force_conflict = $urandom_range(0, 99) < random_conflict_percent;
+      if (random_addr_profile == "sequential")
+        index = n % span_words;
+      else if (random_addr_profile == "hot-set")
+        index = (($urandom_range(0, 7) * 64) + $urandom_range(0, 3) * 8 +
+                 $urandom_range(0, 7)) % span_words;
+      else if (random_addr_profile == "same-set" || force_conflict) begin
+        index = (($urandom_range(0, 15) * 64 * 8) + $urandom_range(0, 7)) % span_words;
+        conflicts++;
+      end else
+        index = $urandom_range(0, span_words - 1);
+      addr = random_addr_base + index*4;
+      if (n == random_reset_operation) begin
+        if (random_reset_phase == "refill") run_reset_mid_refill();
+        else if (random_reset_phase == "writeback") reset_during_writeback();
+        else reset_between_operations();
+        model.delete();
+        resets++;
+      end
+      if (model.exists(addr >> 2) == 0) model[addr >> 2] = memory[addr >> 2];
+
+      if (random_strobe_profile == "single-byte")
+        strobes = 4'b0001 << $urandom_range(0, 3);
+      else if (random_strobe_profile == "mixed") begin
+        strobes = 4'($urandom_range(1, 15));
+        if (strobes == 4'hf) strobes = 4'b0110;
+      end else
+        strobes = 4'hf;
+
+      inject_read_error = 0;
+      inject_write_error = 0;
+      if ($urandom_range(0, 99) < random_error_percent) begin
+        inject_read_error = 1;
+        inject_write_error = 1;
+        injected++;
+      end
+
+      if ($urandom_range(0, 99) >= random_read_percent) begin
         data = $urandom;
-        cpu_access(1, addr, data, 4'hf, 2, actual, error);
-        model[index] = data;
+        if (strobes == 4'hf) full_strobes++;
+        else if (strobes == 4'b0001 || strobes == 4'b0010 ||
+                 strobes == 4'b0100 || strobes == 4'b1000) single_strobes++;
+        else partial_strobes++;
+        cpu_access(1, addr, data, strobes, 2, actual, error);
+        writes++;
+        if (!error) begin
+          for (int byte_idx = 0; byte_idx < 4; byte_idx++)
+            if (strobes[byte_idx])
+              model[addr >> 2][byte_idx*8 +: 8] = data[byte_idx*8 +: 8];
+        end
       end else begin
         cpu_access(0, addr, 0, 0, 2, actual, error);
-        if (error || actual !== model[index]) begin
-          $error("Random mismatch index=%0d expected=%08x actual=%08x", index, model[index], actual);
+        reads++;
+        if (!error && actual !== model[addr >> 2]) begin
+          $error("Random mismatch addr=%08x expected=%08x actual=%08x",
+                 addr, model[addr >> 2], actual);
           failures++;
         end
       end
+      if (error) observed_errors++;
+      inject_read_error = 0;
+      inject_write_error = 0;
     end
+    $display("RANDOM_RESULT|requested_ops=%0d|reads=%0d|writes=%0d|conflicts=%0d|injections=%0d|error_responses=%0d|resets=%0d|full_strobes=%0d|single_strobes=%0d|partial_strobes=%0d|bp_pct=%0d|axi_stalls=%0d|axi_valid=%0d|addr_profile=%s|strobe_profile=%s",
+             random_operations, reads, writes, conflicts, injected, observed_errors,
+             resets, full_strobes, single_strobes, partial_strobes, bp_percent,
+             axi_stall_cycles, axi_valid_cycles, random_addr_profile, random_strobe_profile);
+  endtask
+
+  task automatic run_cross_matrix;
+    logic [31:0] ignored;
+    bit error;
+    // Read/write hit/miss, offset, and strobe combinations.
+    for (int word = 0; word < 8; word++) begin
+      expect_read(32'h0000_a000 + word*4, memory[(32'h0000_a000 >> 2) + word]);
+      cpu_access(1, 32'h0000_a000 + word*4, 32'hf0e1_d2c3 ^ word,
+                 4'hf, 2, ignored, error);
+      cpu_access(1, 32'h0000_a000 + word*4, 32'h0102_0304 ^ word,
+                 4'b0001 << (word % 4), 2, ignored, error);
+      cpu_access(1, 32'h0000_a000 + word*4, 32'h89ab_cdef ^ word,
+                 word[0] ? 4'b0110 : 4'b1001, 2, ignored, error);
+    end
+
+    // Clean way-0 victim.
+    reset_between_operations();
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    expect_read(32'h0000_8000, memory[32'h8000 >> 2]);
+
+    // Clean way-1 victim.
+    reset_between_operations();
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    expect_read(32'h0000_8000, memory[32'h8000 >> 2]);
+
+    // Dirty way-0 victim.
+    reset_between_operations();
+    cpu_access(1, 32'h0000_7000, 32'hd100_0000, 4'hf, 2, ignored, error);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    expect_read(32'h0000_7800, memory[32'h7800 >> 2]);
+    expect_read(32'h0000_8000, memory[32'h8000 >> 2]);
+
+    // Dirty way-1 victim.
+    reset_between_operations();
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    cpu_access(1, 32'h0000_7800, 32'hd100_0001, 4'hf, 2, ignored, error);
+    expect_read(32'h0000_7000, memory[32'h7000 >> 2]);
+    expect_read(32'h0000_8000, memory[32'h8000 >> 2]);
+
+    // Every maintenance command scans invalid, clean, and dirty lines.
+    for (int command = 0; command < 3; command++) begin
+      reset_between_operations();
+      expect_read(32'h0000_b000 + command*32, memory[(32'hb000 + command*32) >> 2]);
+      cpu_access(1, 32'h0000_b800 + command*32, 32'hcafe_1000 + command,
+                 4'hf, 2, ignored, error);
+      issue_maintenance(command[1:0]);
+    end
+  endtask
+
+  task automatic run_performance_workload;
+    logic [31:0] ignored;
+    bit error;
+    run_random();
+    cpu_access(1, 32'h0000_c000, 32'hface_0001, 4'hf, 2, ignored, error);
+    issue_maintenance(2'd0);
+    expect_read(32'h0000_c800, memory[32'hc800 >> 2]);
+    issue_maintenance(2'd1);
+    cpu_access(1, 32'h0000_d000, 32'hface_0002, 4'hf, 2, ignored, error);
+    issue_maintenance(2'd2);
   endtask
 
   initial begin
     if (!$value$plusargs("TEST=%s", test_name)) test_name = "smoke";
     void'($value$plusargs("STALL_MOD=%d", stall_mod));
-    for (int i = 0; i < 65536; i++) memory[i] = 32'h1000_0000 ^ i;
+    void'($value$plusargs("BP_PCT=%d", bp_percent));
+    void'($value$plusargs("OPS=%d", random_operations));
+    void'($value$plusargs("READ_PCT=%d", random_read_percent));
+    void'($value$plusargs("CONFLICT_PCT=%d", random_conflict_percent));
+    void'($value$plusargs("ERROR_PCT=%d", random_error_percent));
+    void'($value$plusargs("RESET_OP=%d", random_reset_operation));
+    void'($value$plusargs("SEED=%d", random_seed_cfg));
+    void'($value$plusargs("ADDR_BASE=%h", random_addr_base));
+    void'($value$plusargs("ADDR_SPAN=%h", random_addr_span));
+    void'($value$plusargs("RESET_PHASE=%s", random_reset_phase));
+    void'($value$plusargs("STROBE_PROFILE=%s", random_strobe_profile));
+    void'($value$plusargs("ADDR_PROFILE=%s", random_addr_profile));
+    model_final_flush = $test$plusargs("MODEL_FINAL_FLUSH");
+    for (int i = 0; i < 65536; i++) begin
+      memory[i] = 32'h1000_0000 ^ i;
+      memory_touched[i] = 0;
+    end
     reset_dut();
     case (test_name)
       "smoke": run_smoke();
+      "read_miss": run_read_miss();
+      "read_hit": run_read_hit();
+      "write_miss": run_write_miss();
+      "write_hit": run_write_hit();
+      "clean_evict": run_clean_evict();
       "dirty_evict": run_dirty_evict();
       "backpressure": run_backpressure();
       "read_error": run_read_error();
@@ -485,13 +777,20 @@ module tb_l1_dcache;
       "maintenance_error": run_maintenance_error();
       "maintenance_final_dirty": run_maintenance_final_dirty();
       "maintenance_channel_waits": run_maintenance_channel_waits();
+      "cross_matrix": run_cross_matrix();
+      "performance_workload": run_performance_workload();
       "random": run_random();
       default: begin $error("Unknown TEST=%s", test_name); failures++; end
     endcase
+    if (model_final_flush) issue_maintenance(2'd0);
     repeat (5) @(posedge clk);
     if (request_count != response_count) begin
       $error("Request/response count mismatch %0d/%0d", request_count, response_count);
       failures++;
+    end
+    for (int i = 0; i < 65536; i++) begin
+      if (memory_touched[i])
+        dut.u_trace_observer.emit_final_memory(i << 2, memory[i]);
     end
     $display("CACHE_RESULT|test=%s|status=%s|requests=%0d|responses=%0d|hits=%0d|misses=%0d|evictions=%0d|errors=%0d|cycles=%0d",
              test_name, failures == 0 ? "PASS" : "FAIL", request_count, response_count,

@@ -7,10 +7,17 @@
 class CacheReference {
  public:
   struct Response {
-    uint32_t data;
-    bool error;
-    bool hit;
-    bool eviction;
+    uint32_t data = 0;
+    bool error = false;
+    bool hit = false;
+    bool eviction = false;
+    unsigned way = 0;
+    bool victim_valid = false;
+    bool victim_dirty = false;
+    unsigned prior_lru = 0;
+    uint32_t refill_base = 0;
+    uint32_t victim_base = 0;
+    std::array<uint32_t, 8> victim_words{};
   };
 
   CacheReference();
@@ -20,6 +27,7 @@ class CacheReference {
   Response access(uint32_t address, bool write, uint32_t data,
                   uint8_t strobes, uint8_t size);
   bool flush(bool invalidate);
+  bool maintenance(uint8_t command);
 
  private:
   static constexpr unsigned kSets = 64;
@@ -49,4 +57,3 @@ void cache_ref_set_memory(void* handle, uint32_t address, uint32_t value);
 uint64_t cache_ref_access(void* handle, uint32_t address, uint32_t write,
                           uint32_t data, uint32_t strobes, uint32_t size);
 }
-

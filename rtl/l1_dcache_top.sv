@@ -63,20 +63,28 @@ module l1_dcache_top #(
   output logic [1:0]  mon_refill_beat,
   output logic [1:0]  mon_writeback_beat
 );
+  import dcache_pkg::dcache_state_e;
+  import dcache_pkg::ST_IDLE;
+  import dcache_pkg::ST_LOOKUP;
+  import dcache_pkg::ST_WB_AW;
+  import dcache_pkg::ST_WB_W;
+  import dcache_pkg::ST_WB_B;
+  import dcache_pkg::ST_REFILL_AR;
+  import dcache_pkg::ST_REFILL_R;
+  import dcache_pkg::ST_REFILL_FINISH;
+  import dcache_pkg::ST_REPLAY;
+  import dcache_pkg::ST_RESPONSE;
+  import dcache_pkg::ST_MAINT_SCAN;
+  import dcache_pkg::ST_MAINT_WB_AW;
+  import dcache_pkg::ST_MAINT_WB_W;
+  import dcache_pkg::ST_MAINT_WB_B;
   localparam int INDEX_BITS = $clog2(SETS);
   localparam int OFFSET_BITS = 5;
   localparam int TAG_BITS = 32 - INDEX_BITS - OFFSET_BITS;
   localparam int WORDS_PER_LINE = 8;
   localparam logic [INDEX_BITS-1:0] LAST_SET = INDEX_BITS'(SETS - 1);
 
-  typedef enum logic [4:0] {
-    ST_IDLE, ST_LOOKUP, ST_WB_AW, ST_WB_W, ST_WB_B,
-    ST_REFILL_AR, ST_REFILL_R, ST_REFILL_FINISH, ST_REPLAY,
-    ST_RESPONSE, ST_MAINT_SCAN, ST_MAINT_WB_AW, ST_MAINT_WB_W,
-    ST_MAINT_WB_B
-  } state_e;
-
-  state_e state;
+  dcache_state_e state;
   logic [TAG_BITS-1:0] tags [WAYS][SETS];
   logic valid_bits [WAYS][SETS];
   logic dirty_bits [WAYS][SETS];
@@ -137,6 +145,18 @@ module l1_dcache_top #(
     else
       choose_victim = lru[set_idx];
   endfunction
+
+  wire lookup_victim_way = choose_victim(req_set);
+  wire lookup_way0_valid = valid_bits[0][req_set];
+  wire lookup_way1_valid = valid_bits[1][req_set];
+  wire lookup_victim_valid = valid_bits[lookup_victim_way][req_set];
+  wire lookup_victim_dirty = dirty_bits[lookup_victim_way][req_set];
+  wire lookup_lru = lru[req_set];
+  wire active_victim_valid = valid_bits[victim_way][victim_set];
+  wire active_victim_dirty = dirty_bits[victim_way][victim_set];
+  wire [TAG_BITS-1:0] active_victim_tag = tags[victim_way][victim_set];
+  wire maint_line_valid = valid_bits[maint_way][maint_set];
+  wire maint_line_dirty = dirty_bits[maint_way][maint_set];
 
   assign cpu_req_ready = state == ST_IDLE && !maint_valid;
   assign maint_ready = state == ST_IDLE;
@@ -258,7 +278,7 @@ module l1_dcache_top #(
             state <= ST_RESPONSE;
           end else begin
             logic selected_way;
-            selected_way = choose_victim(req_set);
+            selected_way = lookup_victim_way;
             victim_way <= selected_way;
             victim_set <= req_set;
             mon_miss <= 1'b1;

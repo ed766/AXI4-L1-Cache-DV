@@ -23,9 +23,9 @@ def metadata(descriptor: str) -> tuple[str, int, str]:
 
 
 def exclusion(point_type: str, line: int, object_name: str) -> str:
-    if point_type == "line" and line == 374:
+    if point_type == "line" and object_name == "case" and line > 350:
         return "unreachable_defensive_default"
-    if point_type == "line" and line >= 377:
+    if point_type == "line" and object_name == "block" and line >= 385:
         return "assertion_declaration_not_executable_rtl"
     if point_type == "toggle" and any(name in object_name for name in
                                        ("tags", "data_mem", "parity_mem", "refill_buf")):
@@ -98,10 +98,10 @@ for point_type, values in sorted(points.items()):
     })
 
 with (REPORTS / "code_coverage_summary.csv").open("w", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=summary_rows[0].keys())
+    writer = csv.DictWriter(handle, fieldnames=summary_rows[0].keys(), lineterminator="\n")
     writer.writeheader(); writer.writerows(summary_rows)
 with (REPORTS / "code_coverage_holes.csv").open("w", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=hole_rows[0].keys())
+    writer = csv.DictWriter(handle, fieldnames=hole_rows[0].keys(), lineterminator="\n")
     writer.writeheader(); writer.writerows(hole_rows)
 
 text = "# Verilator Code Coverage\n\n"

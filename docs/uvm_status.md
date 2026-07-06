@@ -1,12 +1,12 @@
-# UVM Status
+# Optional UVM Collateral
 
-The repository contains a real UVM architecture with:
+UVM is not headline or closure evidence for this cache project. The repository retains a UVM architecture with:
 
 - constrained cache sequence items and sequencer
 - CPU driver and monitor over a virtual interface
 - reactive AXI backing-memory component
 - analysis-port traffic into a scoreboard and coverage subscriber
-- a response-accounting scoreboard; the independently tested C++ model exposes a DPI-compatible API for a later online-prediction step
+- a response-accounting scoreboard; authoritative independent prediction is provided by the non-UVM C++ trace-replay lane
 - phase objections and UVM report accounting
 
 The environment compiles with the local development Verilator `5.043` and the checked-out `uvm-verilator` source. The current runtime probe stalls before run-phase progression and is terminated by a 60-second timeout. Therefore UVM execution or closure is not claimed; the default report-backed gate remains the non-UVM Verilator regression.

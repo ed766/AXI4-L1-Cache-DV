@@ -1,0 +1,2 @@
+mutation,test,expected_assertion,failure_cycle,early_beat,fst,trace,image,status
+CACHE_BUG_WLAST_EARLY,dirty_evict,a_wlast_exactly_final_beat,39,2,build/debug_wlast/wlast_early.fst,build/debug_wlast/wlast_early_trace.csv,docs/images/wlast_early_debug.svg,DETECTED

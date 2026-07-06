@@ -1,11 +1,14 @@
 # Functional Coverage
 
-This initial executable coverage model is separate from Verilator code coverage.
+This trace/event-derived feature model is separate from Verilator code coverage and is not presented as simulator covergroup coverage.
 
 | Coverage point | Source test | Status |
 | --- | --- | --- |
-| `cold_miss_refill` | `smoke` | COVERED |
-| `load_after_refill_hit` | `smoke` | COVERED |
+| `cold_miss_refill` | `read_miss` | COVERED |
+| `load_after_refill_hit` | `read_hit` | COVERED |
+| `write_miss_allocate` | `write_miss` | COVERED |
+| `write_hit_no_axi` | `write_hit` | COVERED |
+| `clean_eviction_no_writeback` | `clean_evict` | COVERED |
 | `dirty_eviction_writeback` | `dirty_evict` | COVERED |
 | `axi_channel_backpressure` | `backpressure` | COVERED |
 | `axi_read_error_propagation` | `read_error` | COVERED |
@@ -23,9 +26,11 @@ This initial executable coverage model is separate from Verilator code coverage.
 | `maintenance_axi_channel_waits` | `maintenance_channel_waits` | COVERED |
 | `seeded_random_data_integrity` | `random` | COVERED |
 
-Current baseline: **18 / 18**. The release target expands this model before claiming closure.
+Current release result: **21 / 21** covered.
 
 
 ## Code Coverage Interpretation
 
 Native Verilator coverage is reported separately in `reports/code_coverage.md`. The current suite reaches all reviewed executable lines and nearly all branch points. Raw toggle coverage remains materially lower because it includes cache-array storage bits, fixed AXI burst constants, and address bits outside the bounded testbench memory window. Those raw values remain visible; only storage-array toggle points and non-executable assertion/default lines are excluded from reviewed summaries.
+
+Cache-specific same-window interaction coverage is reported separately in `docs/cross_coverage.md`; it does not inflate the feature vector above.
