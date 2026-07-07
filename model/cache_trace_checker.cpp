@@ -74,8 +74,8 @@ struct Pending {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "usage: cache_trace_checker TRACE.csv\n";
+  if (argc != 2 && argc != 4) {
+    std::cerr << "usage: cache_trace_checker TRACE.csv [SETS WAYS]\n";
     return 2;
   }
   std::ifstream input(argv[1]);
@@ -85,7 +85,9 @@ int main(int argc, char** argv) {
   }
   std::string line;
   std::getline(input, line);
-  CacheReference model;
+  const unsigned sets = argc == 4 ? static_cast<unsigned>(std::stoul(argv[2])) : 64;
+  const unsigned ways = argc == 4 ? static_cast<unsigned>(std::stoul(argv[3])) : 2;
+  CacheReference model(sets, ways);
   std::optional<Pending> pending;
   std::optional<CacheReference> maintenance_before;
   std::unordered_map<uint32_t, uint32_t> observed_memory;

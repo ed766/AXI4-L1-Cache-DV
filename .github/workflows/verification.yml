@@ -36,6 +36,42 @@ jobs:
             reports/*.csv
             reports/*.md
             docs/performance.md
+            docs/associativity_characterization.md
             docs/coverage.md
             docs/cross_coverage.md
             docs/images/*debug.svg
+            docs/images/associativity_comparison.svg
+
+  formal-proof:
+    runs-on: ubuntu-24.04
+    env:
+      OSS_CAD_TAG: 2026-05-08
+      OSS_CAD_ARCHIVE: oss-cad-suite-linux-x64-20260508.tgz
+      OSS_CAD_SHA256: c71735b02df363e2ad8e9f129e477e4f31b18d6532e9bed92eb8ad296101cb6f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/oss-cad-suite
+          key: oss-cad-suite-linux-x64-20260508
+      - name: Install pinned OSS CAD Suite
+        run: |
+          if [ ! -x "$HOME/.cache/oss-cad-suite/bin/sby" ]; then
+            mkdir -p "$HOME/.cache"
+            curl -L --fail --retry 3 \
+              "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${OSS_CAD_TAG}/${OSS_CAD_ARCHIVE}" \
+              -o "/tmp/${OSS_CAD_ARCHIVE}"
+            echo "${OSS_CAD_SHA256}  /tmp/${OSS_CAD_ARCHIVE}" | sha256sum -c -
+            tar -xzf "/tmp/${OSS_CAD_ARCHIVE}" -C "$HOME/.cache"
+          fi
+          echo "$HOME/.cache/oss-cad-suite/bin" >> "$GITHUB_PATH"
+      - name: Prove cache safety properties and expected mutation failures
+        run: make formal-prove
+      - name: Upload formal reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-formal-reports
+          path: |
+            reports/formal_*.log
+            reports/formal_proof_summary.csv
+            docs/formal.md

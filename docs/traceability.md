@@ -15,7 +15,12 @@
 | Maintenance writeback errors are visible | `maintenance_error` | `maint_error` check | response accounting remains bounded | `maintenance_writeback_error` |
 | Random conflicts preserve data | 100 manifest-driven scenarios | shadow model plus independent C++ trace replay | response uniqueness and replacement assertions | `55 / 55` cache crosses and stress summary |
 | Per-request latency tradeoffs are measurable | `performance_workload` at 0/25/50/75% backpressure | trace-derived latency classifier | protocol assertions remain active | mean/p50/p95/max by hit, clean miss, dirty miss, and maintenance |
+| Associativity changes conflict behavior at equal capacity | identical deterministic traces on 128x1 and 64x2 geometries | geometry-aware C++ trace replay | invalid-way preference and response accounting | 20/20 checks and 14-point characterization CSV |
+| Selected safety and error paths hold under symbolic stimulus | SymbiYosys environment with legal AXI response assumptions | bounded safety/error tasks and reachability covers | WLAST, writeback/refill ordering, invalid-way preference, maintenance exclusion | `formal_proof_summary.csv` |
+| AXI4 cache-master subset rules are explicit and checked | read/write miss, dirty eviction, channel waits, error paths | C++ trace replay and AXI response model | AW/AR/W stability, final-beat WLAST, failed-refill containment | `axi_subset_compliance.md` |
+| Limited UVM methodology lane exercises representative scenarios | UVM compile plus read-miss, dirty-evict, and read-error equivalent probes | UVM runtime summary and equivalent scenario logs | response accounting remains in default SV/C++ lane | `uvm_runtime_summary.csv` |
 | Checker detects dirty-state mutation | `CACHE_BUG_DIRTY_SKIP` | dirty-eviction test | planned dirty-implies-valid proof | bug report |
 | Checker detects LRU mutation | `CACHE_BUG_LRU_INVERT` | victim/writeback check | planned replacement property | bug report |
 | Checker detects ignored AXI error | `CACHE_BUG_REFILL_ERROR_IGNORE` | error propagation test | failed refill not installed | bug report |
 | Early WLAST is rejected before acceptance | `CACHE_BUG_WLAST_EARLY` | FST, normalized trace, deterministic debug SVG | `a_wlast_exactly_final_beat` | debug waveform summary |
+| Debug story is reviewable in one pass | early-WLAST mutation case study | assertion failure, waveform SVG, mutation report | `a_wlast_exactly_final_beat` | `hiring_manager_case_study.md` |

@@ -63,6 +63,7 @@ module l1_dcache_top #(
   output logic [1:0]  mon_refill_beat,
   output logic [1:0]  mon_writeback_beat
 );
+`ifndef FORMAL
   import dcache_pkg::dcache_state_e;
   import dcache_pkg::ST_IDLE;
   import dcache_pkg::ST_LOOKUP;
@@ -78,13 +79,35 @@ module l1_dcache_top #(
   import dcache_pkg::ST_MAINT_WB_AW;
   import dcache_pkg::ST_MAINT_WB_W;
   import dcache_pkg::ST_MAINT_WB_B;
+`else
+  localparam logic [4:0] ST_IDLE = 0, ST_LOOKUP = 1, ST_WB_AW = 2,
+      ST_WB_W = 3, ST_WB_B = 4, ST_REFILL_AR = 5, ST_REFILL_R = 6,
+      ST_REFILL_FINISH = 7, ST_REPLAY = 8, ST_RESPONSE = 9,
+      ST_MAINT_SCAN = 10, ST_MAINT_WB_AW = 11, ST_MAINT_WB_W = 12,
+      ST_MAINT_WB_B = 13;
+`endif
   localparam int INDEX_BITS = $clog2(SETS);
   localparam int OFFSET_BITS = 5;
   localparam int TAG_BITS = 32 - INDEX_BITS - OFFSET_BITS;
   localparam int WORDS_PER_LINE = 8;
   localparam logic [INDEX_BITS-1:0] LAST_SET = INDEX_BITS'(SETS - 1);
 
+`ifndef FORMAL
+  initial begin
+    if (!(WAYS == 1 || WAYS == 2))
+      $fatal(1, "l1_dcache_top supports WAYS=1 or WAYS=2");
+    if (!(SETS == 64 || SETS == 128))
+      $fatal(1, "l1_dcache_top supports SETS=64 or SETS=128");
+    if (SETS * WAYS != 128)
+      $fatal(1, "cache geometry must remain 4 KiB (SETS*WAYS=128)");
+  end
+`endif
+
+`ifdef FORMAL
+  logic [4:0] state;
+`else
   dcache_state_e state;
+`endif
   logic [TAG_BITS-1:0] tags [WAYS][SETS];
   logic valid_bits [WAYS][SETS];
   logic dirty_bits [WAYS][SETS];
@@ -117,7 +140,7 @@ module l1_dcache_top #(
                       (req_size_q == 1 && req_addr_q[0] == 0) ||
                       (req_size_q == 2 && req_addr_q[1:0] == 0));
   wire hit0 = valid_bits[0][req_set] && tags[0][req_set] == req_tag;
-  wire hit1 = valid_bits[1][req_set] && tags[1][req_set] == req_tag;
+  logic hit1;
   wire hit = hit0 || hit1;
   wire hit_way = hit1;
 
@@ -134,21 +157,32 @@ module l1_dcache_top #(
     result = old_word;
     for (int b = 0; b < 4; b++)
       if (strobes[b]) result[b*8 +: 8] = new_word[b*8 +: 8];
-    return result;
+    merge_word = result;
   endfunction
 
-  function automatic logic choose_victim(input logic [INDEX_BITS-1:0] set_idx);
-    if (!valid_bits[0][set_idx])
-      choose_victim = 1'b0;
-    else if (!valid_bits[1][set_idx])
-      choose_victim = 1'b1;
-    else
-      choose_victim = lru[set_idx];
-  endfunction
-
-  wire lookup_victim_way = choose_victim(req_set);
+  logic lookup_victim_way;
   wire lookup_way0_valid = valid_bits[0][req_set];
-  wire lookup_way1_valid = valid_bits[1][req_set];
+  logic lookup_way1_valid;
+  generate
+    if (WAYS == 1) begin : g_direct_mapped
+      always_comb begin
+        hit1 = 1'b0;
+        lookup_way1_valid = 1'b0;
+        lookup_victim_way = 1'b0;
+      end
+    end else begin : g_two_way
+      always_comb begin
+        hit1 = valid_bits[1][req_set] && tags[1][req_set] == req_tag;
+        lookup_way1_valid = valid_bits[1][req_set];
+        if (!valid_bits[0][req_set])
+          lookup_victim_way = 1'b0;
+        else if (!valid_bits[1][req_set])
+          lookup_victim_way = 1'b1;
+        else
+          lookup_victim_way = lru[req_set];
+      end
+    end
+  endgenerate
   wire lookup_victim_valid = valid_bits[lookup_victim_way][req_set];
   wire lookup_victim_dirty = dirty_bits[lookup_victim_way][req_set];
   wire lookup_lru = lru[req_set];
@@ -209,11 +243,11 @@ module l1_dcache_top #(
       mon_evict <= 1'b0;
       for (int w = 0; w < WAYS; w++) begin
         for (int s = 0; s < SETS; s++) begin
-          valid_bits[w][s] <= 1'b0;
-          dirty_bits[w][s] <= 1'b0;
+          valid_bits[w][s] = 1'b0;
+          dirty_bits[w][s] = 1'b0;
         end
       end
-      for (int s = 0; s < SETS; s++) lru[s] <= 1'b0;
+      for (int s = 0; s < SETS; s++) lru[s] = 1'b0;
     end else begin
       maint_done <= 1'b0;
       mon_hit <= 1'b0;
@@ -272,7 +306,7 @@ module l1_dcache_top #(
 `ifdef CACHE_BUG_LRU_INVERT
             lru[req_set] <= hit_way;
 `else
-            lru[req_set] <= ~hit_way;
+            if (WAYS == 2) lru[req_set] <= ~hit_way;
 `endif
             cpu_rsp_valid <= 1'b1;
             state <= ST_RESPONSE;
@@ -343,7 +377,7 @@ module l1_dcache_top #(
             tags[victim_way][victim_set] <= req_tag;
             valid_bits[victim_way][victim_set] <= 1'b1;
             dirty_bits[victim_way][victim_set] <= 1'b0;
-            lru[req_set] <= ~victim_way;
+            if (WAYS == 2) lru[req_set] <= ~victim_way;
             state <= ST_REPLAY;
           end
         end
@@ -351,7 +385,7 @@ module l1_dcache_top #(
         ST_RESPONSE: if (!cpu_rsp_valid || cpu_rsp_ready) state <= ST_IDLE;
 
         ST_MAINT_SCAN: begin
-          if (maint_set == LAST_SET && maint_way &&
+          if (maint_set == LAST_SET && (WAYS == 1 || maint_way) &&
               !(dirty_bits[maint_way][maint_set] && maint_cmd_q != 2'd1)) begin
             if (maint_cmd_q != 2'd0) valid_bits[maint_way][maint_set] <= 1'b0;
             maint_active_q <= 1'b0;
@@ -366,8 +400,10 @@ module l1_dcache_top #(
             state <= ST_MAINT_WB_AW;
           end else begin
             if (maint_cmd_q != 2'd0) valid_bits[maint_way][maint_set] <= 1'b0;
-            if (maint_way) begin maint_way <= 1'b0; maint_set <= maint_set + 1'b1; end
-            else maint_way <= maint_way + 1'b1;
+            if (WAYS == 1 || maint_way) begin
+              maint_way <= 1'b0;
+              maint_set <= maint_set + 1'b1;
+            end else maint_way <= 1'b1;
           end
         end
         ST_MAINT_WB_AW: if (m_axi_awready) state <= ST_MAINT_WB_W;
@@ -380,14 +416,16 @@ module l1_dcache_top #(
           else dirty_bits[victim_way][victim_set] <= 1'b0;
           if (maint_cmd_q == 2'd2 && m_axi_bresp == 2'b00)
             valid_bits[victim_way][victim_set] <= 1'b0;
-          if (maint_set == LAST_SET && maint_way) begin
+          if (maint_set == LAST_SET && (WAYS == 1 || maint_way)) begin
             maint_active_q <= 1'b0;
             maint_done <= 1'b1;
             maint_error <= maint_error_q || (m_axi_bresp != 2'b00);
             state <= ST_IDLE;
           end else begin
-            if (maint_way) begin maint_way <= 1'b0; maint_set <= maint_set + 1'b1; end
-            else maint_way <= maint_way + 1'b1;
+            if (WAYS == 1 || maint_way) begin
+              maint_way <= 1'b0;
+              maint_set <= maint_set + 1'b1;
+            end else maint_way <= 1'b1;
             state <= ST_MAINT_SCAN;
           end
         end
@@ -395,6 +433,60 @@ module l1_dcache_top #(
       endcase
     end
   end
+
+`ifdef FORMAL
+  logic formal_read_error_seen;
+  logic formal_check_failed_refill;
+  logic formal_refill_snapshot_valid, formal_refill_snapshot_dirty;
+  logic [TAG_BITS-1:0] formal_refill_snapshot_tag;
+
+  always_ff @(posedge clk) begin
+    if (!rst_n) begin
+      formal_read_error_seen <= 0;
+      formal_check_failed_refill <= 0;
+      formal_refill_snapshot_valid <= 0;
+      formal_refill_snapshot_dirty <= 0;
+      formal_refill_snapshot_tag <= 0;
+    end else begin
+      if (state == ST_REFILL_AR && $past(state) == ST_WB_B)
+        assert($past(m_axi_bvalid && m_axi_bready && m_axi_bresp == 0));
+
+`ifdef FORMAL_ERROR_CHECKS
+      if (state == ST_REFILL_AR && m_axi_arvalid) begin
+        formal_read_error_seen <= 0;
+        formal_refill_snapshot_valid <= active_victim_valid;
+        formal_refill_snapshot_dirty <= active_victim_dirty;
+        formal_refill_snapshot_tag <= active_victim_tag;
+      end
+      if (m_axi_rvalid && m_axi_rready && m_axi_rresp != 0)
+        formal_read_error_seen <= 1;
+      formal_check_failed_refill <= state == ST_REFILL_FINISH && formal_read_error_seen;
+      if (formal_check_failed_refill) begin
+        assert(cpu_rsp_valid && cpu_rsp_error);
+        assert(active_victim_valid == formal_refill_snapshot_valid);
+        assert(active_victim_dirty == formal_refill_snapshot_dirty);
+        assert(active_victim_tag == formal_refill_snapshot_tag);
+      end
+
+      if (state == ST_WB_B && m_axi_bvalid && m_axi_bready && m_axi_bresp != 0)
+        assert(active_victim_dirty);
+`endif
+
+      if (m_axi_wvalid) assert(m_axi_wlast == (wb_beat == 3));
+      if (!lookup_way0_valid) assert(lookup_victim_way == 0);
+      if (lookup_way0_valid && !lookup_way1_valid) assert(lookup_victim_way == 1);
+      if (maint_valid) assert(!cpu_req_ready);
+      cover(mon_hit);
+      cover(mon_miss);
+      cover(mon_evict);
+`ifdef FORMAL_ERROR_CHECKS
+      cover(formal_check_failed_refill);
+      cover(state == ST_WB_B && m_axi_bvalid && m_axi_bready && m_axi_bresp != 0);
+`endif
+      cover(maint_done);
+    end
+  end
+`endif
 
 `ifndef SYNTHESIS
   property p_cpu_response_stable;

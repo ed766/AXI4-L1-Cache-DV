@@ -35,6 +35,7 @@ expected = [
     ("cache_cross_coverage.csv", "status", "COVERED", "Cache interaction cross coverage"),
     ("bug_validation.csv", "status", "DETECTED", "Compile-time bug mutations"),
     ("debug_waveform_summary.csv", "status", "DETECTED", "Waveform-backed debug cases"),
+    ("associativity_check.csv", "status", "PASS", "Equal-capacity associativity checks"),
 ]
 readme = README.read_text()
 for report, key, passing, label in expected:

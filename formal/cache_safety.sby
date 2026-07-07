@@ -1,16 +1,21 @@
+[tasks]
+prove
+cover
+
 [options]
-mode prove
-depth 40
+prove: mode bmc
+prove: depth 40
+cover: mode cover
+cover: depth 50
 
 [engines]
-smtbmc boolector
+prove: abc bmc3
+cover: smtbmc z3
 
 [script]
-read -formal -D SYNTHESIS ../rtl/dcache_pkg.sv ../rtl/l1_dcache_top.sv cache_formal_harness.sv
+read -formal -D FORMAL -D SYNTHESIS l1_dcache_top.sv cache_formal_harness.sv
 prep -top cache_formal_harness
 
 [files]
-../rtl/dcache_pkg.sv
 ../rtl/l1_dcache_top.sv
 cache_formal_harness.sv
-

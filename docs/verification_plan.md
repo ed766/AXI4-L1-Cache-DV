@@ -11,14 +11,16 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Directed/random SV | Fast executable behavior and protocol checks | `make regress` |
 | C++ trace replay | Independent response, replacement, AXI, and memory prediction | `make model-trace-check` |
 | Assertions | Temporal and accounting invariants | enabled by regression |
-| Formal | Solver-backed safety and reachability | `make formal` |
+| Formal | Bounded solver-backed safety/error checks, covers, and mutations | `make formal-prove` |
+| Associativity | Equal-capacity direct-mapped versus 2-way checks and characterization | `make associativity-characterize` |
 | Functional coverage | Feature-intent evidence | `make functional-coverage` |
 | Interaction coverage | Same-window cache-specific crosses | `make cache-cross-coverage` |
 | Performance | Per-request latency and throughput sweeps | `make performance-sweep` |
 | Code coverage | RTL execution evidence | `make coverage` |
+| Coverage-edge lane | Optional byte-strobe, set/way, maintenance-boundary, and direct-mapped structural coverage evidence | `make coverage-edges` |
 | Mutation tests | Checker sensitivity | `make bug-validate` |
 | Debug waveform | Expected-failure FST and deterministic SVG evidence | `make debug-waveform` |
-| Optional UVM compile | Secondary methodology collateral, not closure | `make uvm-compile` |
+| Optional UVM compile/runtime smoke | Secondary methodology collateral, not closure | `make uvm-runtime-smoke` |
 
 ## Required Scenario Families
 
@@ -35,8 +37,11 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - Required functional bins and mandatory crosses close.
 - C++ trace model reports no response, lookup, AXI, eviction, or backing-memory mismatch.
 - Cache interaction coverage closes at `55 / 55`; feature coverage separately includes explicit read/write hit/miss and clean/dirty replacement scenarios.
-- Code coverage reports raw values and reviewed exclusions without manufacturing activity for cache-array bits.
-- Formal remains optional until a solver-backed run is available; it is not part of release closure.
+- Code coverage reports raw values and reviewed exclusions without manufacturing activity for cache-array bits; optional coverage-edge runs are reported separately from the baseline 2-way closure.
+- Formal tasks must meet their stated bounded depths; results are not presented as exhaustive proof.
+- Both equal-capacity cache geometries must pass directed and C++ trace checks before characterization is accepted.
+- The AXI4 subset appendix must map each supported protocol rule to an assertion/checker and a directed scenario.
+- UVM runtime evidence remains explicitly separate from default closure unless real phase runtime is stable across the supported environment.
 - Every implemented bug mutation is detected by a test, assertion, or scoreboard.
 
 Current results must be read from generated reports; targets are not presented as completed results.

@@ -1,6 +1,6 @@
 # AXI4 L1 Data Cache DV Project
 
-A standalone RTL and design-verification project for a blocking, 4 KiB, 2-way set-associative L1 data cache. The cache uses a 32-bit CPU request interface and a 64-bit AXI4 master interface with four-beat line refill and writeback bursts.
+A standalone RTL and design-verification project for a blocking, 4 KiB L1 data cache. The baseline is 2-way set-associative; an equal-capacity direct-mapped structural variant supports measured associativity tradeoff studies. The cache uses a 32-bit CPU request interface and a 64-bit AXI4 master interface with four-beat line refill and writeback bursts.
 
 This repository is independent of the earlier chiplet project. It reuses workflow ideas, but contains new cache RTL, tests, assertions, reference modeling, and reports.
 
@@ -16,12 +16,16 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Cache interaction cross coverage | `55 / 55` bins observed |
 | Named protocol/architecture assertions | `18` |
 | Waveform-backed debug cases | `1 / 1` reproduced |
-| Raw design line coverage | `86.84%` |
+| Raw design line coverage | `88.10%` |
 | Reviewed design line coverage | `100.00%` |
-| Design branch coverage | `98.21%` |
+| Design branch coverage | `95.00%` |
 | Raw design toggle coverage | `59.49%` |
+| Optional coverage-edge scenarios | `10 / 10` passing |
 | Independent C++ model self-test | `PASS` |
-| Solver-backed formal | Harness ready; not run locally |
+| Equal-capacity associativity checks | `20 / 20` passing |
+| Associativity study points | `14` model-checked points |
+| Solver-backed formal tasks | `5 / 5` meeting expectation |
+| UVM runtime smoke collateral | limited 3-scenario compatibility lane |
 
 The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
 
@@ -29,7 +33,7 @@ The executable suite covers cold refill, warm hits, clean and dirty replacement,
 
 ```mermaid
 flowchart LR
-    CPU["CPU ready/valid requests\n32-bit loads and stores"] --> CACHE["4 KiB L1 data cache\n2 ways x 64 sets x 32-byte lines"]
+    CPU["CPU ready/valid requests\n32-bit loads and stores"] --> CACHE["4 KiB L1 data cache\nbaseline 2-way or direct-mapped variant"]
     CACHE --> TAG["Tag, valid, dirty, parity\nand per-set LRU"]
     CACHE --> CTRL["Blocking miss controller\nhit, eviction, refill, replay"]
     CTRL --> AXI["AXI4 master\n64-bit, four-beat INCR bursts"]
@@ -45,15 +49,17 @@ flowchart LR
 | Property | Configuration |
 | --- | --- |
 | Capacity | 4 KiB |
-| Associativity | 2-way |
+| Baseline associativity | 2-way |
 | Line size | 32 bytes |
-| Sets | 64 |
+| Baseline sets | 64 |
 | CPU data width | 32 bits |
 | AXI data width | 64 bits |
 | Write policy | Write-back, write-allocate |
 | Replacement | One LRU victim bit per set |
 | Outstanding misses | One |
 | Integrity | Per-word parity |
+
+The comparison variant uses `128 sets x 1 way`; the baseline uses `64 sets x 2 ways`. Both retain 4 KiB capacity and 32-byte lines, so the study isolates associativity and set-count effects.
 
 The AXI interface is deliberately constrained to one outstanding transaction, fixed ID semantics, and four-beat `INCR` bursts. This is not an AXI compliance claim.
 
@@ -65,13 +71,17 @@ make project-check  # lint, C++ model, regression, coverage/report generation
 make release-check  # stress, trace replay, crosses, performance, mutations, code coverage
 make model-trace-check
 make cache-cross-coverage
+make coverage-edges # optional byte-strobe, set/way, maintenance-boundary, and direct-mapped coverage evidence
 make performance-sweep
+make associativity-check
+make associativity-characterize
 make bug-validate   # expected-failure mutation checks
 make debug-waveform # FST plus deterministic assertion-debug SVG
-make formal         # runs when SymbiYosys is installed
+make formal-prove   # bounded safety, reachability, and mutation checks
+make uvm-runtime-smoke # limited UVM compile + runtime-equivalent smoke summary
 ```
 
-The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains as secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`, and runtime is not claimed.
+The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`, and runtime evidence is limited to a three-scenario compatibility smoke lane rather than closure equivalence.
 
 ## Reviewer Path
 
@@ -81,9 +91,10 @@ For a focused design-verification review:
 2. Use the [verification traceability matrix](docs/traceability.md) to map requirements to stimulus, checkers, assertions, and coverage.
 3. Read the [cache architecture](docs/architecture.md) for hit, eviction, refill, writeback, and maintenance behavior.
 4. Review the [bug diary](docs/bug_diary.md) for four implemented mutation/debug cases.
-5. Follow the [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
+5. Follow the [hiring-manager case study](docs/hiring_manager_case_study.md) and [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
 6. Inspect [functional and code coverage](docs/coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
-7. Check [UVM status](docs/uvm_status.md) and [formal status](docs/formal.md) for explicit tool and execution boundaries.
+7. Review the [AXI4 subset compliance appendix](docs/axi_subset_compliance.md) and [equal-capacity associativity study](docs/associativity_characterization.md).
+8. Check [UVM status](docs/uvm_status.md) and [formal evidence](docs/formal.md) for explicit tool and execution boundaries.
 
 ## Verification Bar
 
@@ -93,7 +104,11 @@ For a focused design-verification review:
 | AXI and memory checking | Reactive four-beat AXI model plus independent C++ trace replay and final-memory comparison |
 | Assertions | Named CPU, AXI, replacement, maintenance, error-containment, and reset properties |
 | Random and coverage | 100 reproducible manifest scenarios, feature coverage, and same-window interaction crosses |
+| Coverage edges | Optional byte-strobe matrix, set/way sweep, maintenance-boundary, and direct-mapped structural coverage lane |
 | Debug and automation | Four mutation detections, FST/SVG case study, GitHub Actions, and `make release-check` |
+| Architecture tradeoff | 20 directed geometry checks and 14 model-checked direct-mapped/2-way characterization points |
+| Formal | Depth-stated safety/error checks, reachable covers, and expected mutation failures |
+| AXI subset | Cache-master subset contract mapped to assertions, tests, and reports |
 
 ## Verification Structure
 
@@ -101,7 +116,7 @@ For a focused design-verification review:
 - Bound event observer and independent C++ trace replay for responses, replacement, AXI bursts, errors, resets, maintenance, and backing memory.
 - Named protocol and architecture assertions for fault containment, ordering, replacement, and maintenance exclusion.
 - Non-gating UVM CPU agent, memory component, monitor, scoreboard, and sequence source retained as optional collateral.
-- Formal harness for response-count, mutual-exclusion, and refill/eviction reachability properties.
+- SymbiYosys bounded safety/error checks with hit, miss, dirty-eviction, and maintenance witness traces.
 - Generated regression, functional-coverage, mutation, performance, and metrics artifacts.
 
 The [verification plan](docs/verification_plan.md) defines the intended closure model. The [bug diary](docs/bug_diary.md) records only implemented mutations, and [UVM status](docs/uvm_status.md) separates compilation evidence from incomplete runtime validation.

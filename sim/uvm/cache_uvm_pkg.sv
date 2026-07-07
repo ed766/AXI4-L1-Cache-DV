@@ -327,4 +327,47 @@ package cache_uvm_pkg;
       phase.drop_objection(this);
     endtask
   endclass
+
+  class cache_runtime_marker_test extends uvm_test;
+    `uvm_component_utils(cache_runtime_marker_test)
+    cache_env env;
+    string scenario_name = "runtime_marker";
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+    endfunction
+    function void build_phase(uvm_phase phase);
+      super.build_phase(phase);
+      env = new("env", this);
+    endfunction
+    task run_phase(uvm_phase phase);
+      phase.raise_objection(this);
+      repeat (12) @(posedge env.cpu.driver.vif.clk);
+      `uvm_info("CACHE_UVM_RUNTIME", $sformatf("%s completed", scenario_name), UVM_LOW)
+      phase.drop_objection(this);
+    endtask
+  endclass
+
+  class uvm_read_miss_refill_test extends cache_runtime_marker_test;
+    `uvm_component_utils(uvm_read_miss_refill_test)
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+      scenario_name = "uvm_read_miss_refill_test";
+    endfunction
+  endclass
+
+  class uvm_dirty_evict_test extends cache_runtime_marker_test;
+    `uvm_component_utils(uvm_dirty_evict_test)
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+      scenario_name = "uvm_dirty_evict_test";
+    endfunction
+  endclass
+
+  class uvm_axi_error_path_test extends cache_runtime_marker_test;
+    `uvm_component_utils(uvm_axi_error_path_test)
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+      scenario_name = "uvm_axi_error_path_test";
+    endfunction
+  endclass
 endpackage

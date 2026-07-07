@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 module dcache_protocol_assertions #(
-  parameter int TAG_BITS = 21
+  parameter int TAG_BITS = 21,
+  parameter int WAYS = 2
 ) (
   input logic clk,
   input logic rst_n,
@@ -144,7 +145,8 @@ module dcache_protocol_assertions #(
     m_axi_rvalid |-> (m_axi_rlast == (refill_beat == 2'd3)));
   a_invalid_way_precedes_lru: assert property (@(posedge clk) disable iff (!rst_n)
     state == ST_LOOKUP && !hit && (!lookup_way0_valid || !lookup_way1_valid)
-      |-> ((!lookup_way0_valid && lookup_victim_way == 0) ||
+      |-> ((WAYS == 1 && lookup_victim_way == 0) ||
+           (!lookup_way0_valid && lookup_victim_way == 0) ||
            (lookup_way0_valid && !lookup_way1_valid && lookup_victim_way == 1)));
   a_maintenance_blocks_cpu_acceptance: assert property (@(posedge clk) disable iff (!rst_n)
     (maint_busy || maint_valid) |-> !cpu_req_ready);
@@ -156,5 +158,5 @@ module dcache_protocol_assertions #(
     $rose(rst_n) |-> !cpu_rsp_valid);
 endmodule
 
-bind l1_dcache_top dcache_protocol_assertions #(.TAG_BITS(TAG_BITS))
+bind l1_dcache_top dcache_protocol_assertions #(.TAG_BITS(TAG_BITS), .WAYS(WAYS))
   u_protocol_assertions (.*);

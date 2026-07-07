@@ -18,6 +18,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--traces", default="*.csv")
     parser.add_argument("--summary", help="limit traces to tests listed in a summary CSV")
+    parser.add_argument("--sets", type=int, default=64)
+    parser.add_argument("--ways", type=int, default=2)
     args = parser.parse_args()
     BUILD.mkdir(parents=True, exist_ok=True)
     REPORTS.mkdir(exist_ok=True)
@@ -42,7 +44,7 @@ def main() -> int:
     pattern = re.compile(r"TRACE_CHECK\|(.*)")
     rows = []
     for trace in traces:
-        result = subprocess.run([str(checker), str(trace)], cwd=ROOT,
+        result = subprocess.run([str(checker), str(trace), str(args.sets), str(args.ways)], cwd=ROOT,
                                 text=True, capture_output=True)
         output = result.stdout + result.stderr
         match = pattern.search(output)

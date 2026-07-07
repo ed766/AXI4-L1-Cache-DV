@@ -1,0 +1,15 @@
+geometry,capacity_bytes,sets,ways,line_bytes,workload,operations,read_percent,conflict_percent,strobe_profile,hits,misses,hit_rate_percent,clean_evictions,dirty_evictions,refill_beats,writeback_beats,axi_stall_cycles,latency_mean,latency_p50,latency_p95,latency_max,throughput_req_per_cycle,maintenance_latency,model_check,yosys_status,yosys_cells,yosys_area_proxy,timing_proxy
+direct_mapped,4096,128,1,32,sequential,160,75,0,full,140,23,85.89,0,1,92,76,4,3.93,2,16,21,0.11088,258,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,uniform,160,50,0,full,5,158,3.07,32,37,632,312,136,16.20,15,23,23,0.04483,424,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,hot_set,160,50,25,full,128,35,78.53,0,1,140,128,16,4.80,2,15,23,0.09583,348,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,same_set,160,50,100,full,0,163,0.00,82,78,652,320,190,18.36,16,23,23,0.04405,137,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,read_heavy,160,75,25,full,7,156,4.29,53,19,624,176,110,15.29,15,23,23,0.04837,306,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,write_heavy,160,25,25,full,3,160,1.84,16,67,640,504,180,17.68,16,23,23,0.04066,556,PASS,SKIP,NA,NA,NA
+direct_mapped,4096,128,1,32,mixed_strobes,160,50,25,mixed,7,156,4.29,32,44,624,356,148,16.34,15,23,23,0.04414,459,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,sequential,160,75,0,full,140,23,85.89,1,0,92,76,4,3.88,2,16,16,0.11088,265,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,uniform,160,50,0,full,5,158,3.07,31,29,632,312,122,15.85,15,23,23,0.04474,487,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,hot_set,160,50,25,full,128,35,78.53,1,0,140,128,16,4.75,2,15,16,0.09583,356,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,same_set,160,50,100,full,158,5,96.93,1,1,20,16,1,2.44,2,2,23,0.14658,144,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,read_heavy,160,75,25,full,7,156,4.29,43,18,624,176,117,15.31,15,23,23,0.04820,316,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,write_heavy,160,25,25,full,3,160,1.84,18,55,640,504,164,17.26,15,23,23,0.04029,660,PASS,SKIP,NA,NA,NA
+two_way,4096,64,2,32,mixed_strobes,160,50,25,mixed,7,156,4.29,29,37,624,356,137,16.13,15,23,23,0.04391,512,PASS,SKIP,NA,NA,NA

@@ -1,13 +1,21 @@
 #include "cache_reference.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
-CacheReference::CacheReference() { reset(); }
+CacheReference::CacheReference(unsigned sets, unsigned ways)
+    : sets_(sets), ways_(ways), index_bits_(0),
+      lines_(sets, std::vector<Line>(ways)), lru_(sets, 0) {
+  if (!((sets == 64 && ways == 2) || (sets == 128 && ways == 1)))
+    throw std::invalid_argument("supported cache geometries are 64x2 and 128x1");
+  while ((1u << index_bits_) < sets_) ++index_bits_;
+  reset();
+}
 
 void CacheReference::reset() {
   for (auto& set : lines_)
     for (auto& line : set) line = Line{};
-  lru_.fill(0);
+  std::fill(lru_.begin(), lru_.end(), 0);
 }
 
 void CacheReference::set_memory(uint32_t address, uint32_t value) {
@@ -25,7 +33,7 @@ uint32_t CacheReference::get_memory(uint32_t address) const {
 
 void CacheReference::writeback(unsigned set, unsigned way) {
   Line& line = lines_.at(set).at(way);
-  const uint32_t line_base = ((line.tag << 6) | set) << 5;
+  const uint32_t line_base = ((line.tag << index_bits_) | set) << 5;
   for (unsigned word = 0; word < kWordsPerLine; ++word)
     memory_[line_base / 4 + word] = line.words[word];
   line.dirty = false;
@@ -43,11 +51,11 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
     return result;
   }
 
-  const unsigned set = (address >> 5) & 0x3f;
+  const unsigned set = (address >> 5) & (sets_ - 1);
   const unsigned word = (address >> 2) & 0x7;
-  const uint32_t tag = address >> 11;
+  const uint32_t tag = address >> (5 + index_bits_);
   int way = -1;
-  for (unsigned candidate = 0; candidate < kWays; ++candidate)
+  for (unsigned candidate = 0; candidate < ways_; ++candidate)
     if (lines_[set][candidate].valid && lines_[set][candidate].tag == tag)
       way = static_cast<int>(candidate);
 
@@ -58,13 +66,18 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
   response.prior_lru = lru_[set];
   response.refill_base = address & ~0x1fu;
   if (!hit) {
-    if (!lines_[set][0].valid) way = 0;
-    else if (!lines_[set][1].valid) way = 1;
-    else way = lru_[set];
+    way = 0;
+    for (unsigned candidate = 0; candidate < ways_; ++candidate) {
+      if (!lines_[set][candidate].valid) {
+        way = static_cast<int>(candidate);
+        break;
+      }
+      if (candidate + 1 == ways_) way = ways_ == 1 ? 0 : lru_[set];
+    }
     Line& victim = lines_[set][way];
     response.victim_valid = victim.valid;
     response.victim_dirty = victim.dirty;
-    response.victim_base = ((victim.tag << 6) | set) << 5;
+    response.victim_base = ((victim.tag << index_bits_) | set) << 5;
     response.victim_words = victim.words;
     if (victim.valid && victim.dirty) {
       writeback(set, way);
@@ -93,7 +106,7 @@ CacheReference::Response CacheReference::access(uint32_t address, bool write,
     line.dirty = true;
     result = 0;
   }
-  lru_[set] = static_cast<uint8_t>(1 - way);
+  if (ways_ == 2) lru_[set] = static_cast<uint8_t>(1 - way);
   response.data = result;
   return response;
 }
@@ -103,8 +116,8 @@ bool CacheReference::flush(bool invalidate) {
 }
 
 bool CacheReference::maintenance(uint8_t command) {
-  for (unsigned set = 0; set < kSets; ++set) {
-    for (unsigned way = 0; way < kWays; ++way) {
+  for (unsigned set = 0; set < sets_; ++set) {
+    for (unsigned way = 0; way < ways_; ++way) {
       if (command != 1 && lines_[set][way].valid && lines_[set][way].dirty)
         writeback(set, way);
       if (command != 0) lines_[set][way].valid = false;

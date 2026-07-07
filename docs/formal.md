@@ -1,14 +1,16 @@
-# Assertion and Formal Evidence
+# Solver-Backed Formal Evidence
 
-Simulation enables named response-accounting and ready/valid stability assertions for CPU and AXI channels. The reusable assertion module is bound to the cache in the directed regression.
+The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. In particular, cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked.
 
-`formal/cache_safety.sby` provides a solver-ready proof harness for:
+| Task | Kind | Observed | Expected | Meets expectation | Depth | Runtime |
+| --- | --- | --- | --- | --- | ---: | ---: |
+| `bounded_safety` | `bounded_safety` | PASS | PASS | yes | 40 | 3.02 s |
+| `cover` | `cover` | PASS | PASS | yes | 50 | 78.80 s |
+| `error_containment_bmc` | `bounded_error` | PASS | PASS | yes | 40 | 9.12 s |
+| `mutation_wlast_early` | `expected_mutation_failure` | FAIL | FAIL | yes | 40 | 2.45 s |
+| `mutation_refill_error_ignore` | `expected_mutation_failure` | FAIL | FAIL | yes | 40 | 5.34 s |
 
-- response count never exceeding accepted request count
-- read and write address activity not occurring simultaneously in the blocking controller
-- fixed four-beat writeback semantics
-- refill reachability
-- dirty-eviction reachability
 
-The local machine does not currently expose `sby` in `PATH`; therefore no passing solver result is claimed until `make formal` runs with OSS CAD Suite or equivalent tools.
+Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Cover tasks require hits, misses, dirty evictions, and maintenance completion to be reachable. Error paths are separately sensitized by the bounded containment task and expected-failing mutations.
 
+These are depth-stated open-source bounded checks and reachability results for selected invariants, not full cache correctness or commercial formal signoff.

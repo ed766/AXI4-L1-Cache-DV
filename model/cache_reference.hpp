@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
 
 class CacheReference {
  public:
@@ -20,7 +21,7 @@ class CacheReference {
     std::array<uint32_t, 8> victim_words{};
   };
 
-  CacheReference();
+  explicit CacheReference(unsigned sets = 64, unsigned ways = 2);
   void reset();
   void set_memory(uint32_t address, uint32_t value);
   uint32_t get_memory(uint32_t address) const;
@@ -30,8 +31,6 @@ class CacheReference {
   bool maintenance(uint8_t command);
 
  private:
-  static constexpr unsigned kSets = 64;
-  static constexpr unsigned kWays = 2;
   static constexpr unsigned kWordsPerLine = 8;
 
   struct Line {
@@ -41,8 +40,11 @@ class CacheReference {
     std::array<uint32_t, kWordsPerLine> words{};
   };
 
-  std::array<std::array<Line, kWays>, kSets> lines_{};
-  std::array<uint8_t, kSets> lru_{};
+  unsigned sets_;
+  unsigned ways_;
+  unsigned index_bits_;
+  std::vector<std::vector<Line>> lines_;
+  std::vector<uint8_t> lru_;
   std::unordered_map<uint32_t, uint32_t> memory_;
 
   uint32_t memory_word(uint32_t word_address) const;

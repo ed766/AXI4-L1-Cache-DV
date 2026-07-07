@@ -2,11 +2,13 @@
 
 ## Address Decomposition
 
-For a 32-byte line and 64 sets:
+For the baseline 32-byte line and 64-set, 2-way geometry:
 
 - `address[4:0]`: byte offset within a line
 - `address[10:5]`: set index
 - `address[31:11]`: tag
+
+The equal-capacity direct-mapped variant uses 128 sets, so `address[11:5]` is the index and `address[31:12]` is the tag. Both geometries contain 128 total lines and therefore remain 4 KiB.
 
 Each line stores eight 32-bit words. Two words are transferred on every 64-bit AXI beat.
 
@@ -14,7 +16,7 @@ Each line stores eight 32-bit words. Two words are transferred on every 64-bit A
 
 The CPU request is accepted only in `IDLE`. The controller latches address, operation, data, strobes, size, and transaction ID. Aligned 8-, 16-, and 32-bit requests are supported; a misaligned request returns an error without changing cache state.
 
-A hit completes from the selected way. Stores merge bytes according to `wstrb`, regenerate parity, and mark the line dirty. A miss chooses an invalid way before consulting the per-set LRU bit.
+A hit completes from the selected way. Stores merge bytes according to `wstrb`, regenerate parity, and mark the line dirty. A 2-way miss chooses an invalid way before consulting the per-set LRU bit; direct-mapped mode always selects way zero and contains no active replacement policy.
 
 ## Miss Flow
 
@@ -30,4 +32,3 @@ AXI read or write errors become CPU-visible errors. A failed refill does not ins
 ## Maintenance
 
 The maintenance sequencer scans every set and way. It supports flush, invalidate, and flush-then-invalidate. New CPU requests are blocked while maintenance is active. Dirty flushes use the same AXI writeback path as replacement.
-

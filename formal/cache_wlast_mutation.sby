@@ -1,0 +1,14 @@
+[options]
+mode bmc
+depth 40
+
+[engines]
+abc bmc3
+
+[script]
+read -formal -D FORMAL -D SYNTHESIS -D CACHE_BUG_WLAST_EARLY l1_dcache_top.sv cache_formal_harness.sv
+prep -top cache_formal_harness
+
+[files]
+../rtl/l1_dcache_top.sv
+cache_formal_harness.sv

@@ -5,3 +5,4 @@ reports/*.log
 *.vcd
 *.fst
 __pycache__/
+formal/cache_*/

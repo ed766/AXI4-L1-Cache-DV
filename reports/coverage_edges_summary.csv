@@ -1,0 +1,11 @@
+coverage_group,test,status,requests,responses,hits,misses,evictions,errors,cycles,coverage_dat,log
+coverage_edges_2way,byte_strobe_lane_matrix,PASS,34,34,34,2,0,0,276,build/verilator/coverage_edges/coverage_edges_2way_byte_strobe_lane_matrix.dat,reports/coverage_edges_2way_byte_strobe_lane_matrix.log
+coverage_edges_2way,set_way_sweep_toggle,PASS,48,48,48,24,8,0,822,build/verilator/coverage_edges/coverage_edges_2way_set_way_sweep_toggle.dat,reports/coverage_edges_2way_set_way_sweep_toggle.log
+coverage_edges_2way,maintenance_boundary_sets,PASS,18,18,18,15,0,0,803,build/verilator/coverage_edges/coverage_edges_2way_maintenance_boundary_sets.dat,reports/coverage_edges_2way_maintenance_boundary_sets.log
+direct_mapped_variant,read_miss,PASS,1,1,1,1,0,0,154,build/verilator/coverage_direct_mapped/direct_mapped_variant_read_miss.dat,reports/direct_mapped_variant_read_miss.log
+direct_mapped_variant,read_hit,PASS,2,2,2,1,0,0,157,build/verilator/coverage_direct_mapped/direct_mapped_variant_read_hit.dat,reports/direct_mapped_variant_read_hit.log
+direct_mapped_variant,write_miss,PASS,2,2,2,1,0,0,163,build/verilator/coverage_direct_mapped/direct_mapped_variant_write_miss.dat,reports/direct_mapped_variant_write_miss.log
+direct_mapped_variant,write_hit,PASS,3,3,3,1,0,0,166,build/verilator/coverage_direct_mapped/direct_mapped_variant_write_hit.dat,reports/direct_mapped_variant_write_hit.log
+direct_mapped_variant,clean_evict,PASS,3,3,3,3,0,0,182,build/verilator/coverage_direct_mapped/direct_mapped_variant_clean_evict.dat,reports/direct_mapped_variant_clean_evict.log
+direct_mapped_variant,dirty_evict,PASS,3,3,3,3,1,0,188,build/verilator/coverage_direct_mapped/direct_mapped_variant_dirty_evict.dat,reports/direct_mapped_variant_dirty_evict.log
+direct_mapped_variant,maintenance,PASS,2,2,2,2,0,0,304,build/verilator/coverage_direct_mapped/direct_mapped_variant_maintenance.dat,reports/direct_mapped_variant_maintenance.log

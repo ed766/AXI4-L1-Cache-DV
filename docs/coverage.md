@@ -31,6 +31,8 @@ Current release result: **21 / 21** covered.
 
 ## Code Coverage Interpretation
 
-Native Verilator coverage is reported separately in `reports/code_coverage.md`. The current suite reaches all reviewed executable lines and nearly all branch points. Raw toggle coverage remains materially lower because it includes cache-array storage bits, fixed AXI burst constants, and address bits outside the bounded testbench memory window. Those raw values remain visible; only storage-array toggle points and non-executable assertion/default lines are excluded from reviewed summaries.
+Native Verilator coverage is reported separately in `reports/code_coverage.md`. The current suite reaches all reviewed executable lines and nearly all baseline branch points. Raw toggle coverage remains materially lower because it includes cache-array storage bits, fixed AXI burst constants, and address bits outside the bounded testbench memory window. Those raw values remain visible; only storage-array toggle points and non-executable assertion/default lines are excluded from reviewed summaries.
+
+`make coverage-edges` adds optional code-coverage evidence for byte-strobe lane combinations, set/way state toggling, maintenance boundary traversal, and the equal-capacity direct-mapped structural variant. These runs are reported separately from the baseline 2-way cache closure and do not change the feature vector above.
 
 Cache-specific same-window interaction coverage is reported separately in `docs/cross_coverage.md`; it does not inflate the feature vector above.

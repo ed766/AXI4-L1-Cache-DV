@@ -1,4 +1,10 @@
-point_type,raw_hit,raw_total,raw_percent,excluded,reviewed_hit,reviewed_total,reviewed_percent
-branch,55,56,98.21,0,55,56,98.21
-line,33,38,86.84,10,28,28,100.00
-toggle,696,1170,59.49,256,583,914,63.79
+coverage_group,point_type,raw_hit,raw_total,raw_percent,excluded,reviewed_hit,reviewed_total,reviewed_percent
+baseline_2way,branch,57,60,95.00,0,57,60,95.00
+baseline_2way,line,37,42,88.10,13,29,29,100.00
+baseline_2way,toggle,696,1170,59.49,256,583,914,63.79
+coverage_edges_2way,branch,45,60,75.00,0,45,60,75.00
+coverage_edges_2way,line,36,42,85.71,13,28,29,96.55
+coverage_edges_2way,toggle,521,1170,44.53,256,408,914,44.64
+direct_mapped_variant,branch,42,60,70.00,0,42,60,70.00
+direct_mapped_variant,line,33,39,84.62,13,25,26,96.15
+direct_mapped_variant,toggle,374,1235,30.28,256,297,979,30.34

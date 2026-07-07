@@ -23,11 +23,11 @@ scenario,family,seed,operations,read_percent,conflict_percent,backpressure_perce
 21,dirty_eviction,550621738,200,25,75,0,0,-1,idle,single-byte,same-set,00004000,00010000,200,48,152,200,0,0,0,0,152,0,0,0,1585,same-set,single-byte,random,build/verilator/traces/stress_021.csv,PASS
 22,axi_backpressure,1996630059,200,50,50,75,0,-1,idle,full,sequential,00004000,00010000,200,97,103,0,0,0,0,103,0,0,75,74,199,sequential,full,random,build/verilator/traces/stress_022.csv,PASS
 23,reset_error,1295327617,100,50,0,25,0,36,refill,single-byte,uniform,00004000,00010000,100,45,55,0,0,0,1,0,55,0,25,62,593,uniform,single-byte,random,build/verilator/traces/stress_023.csv,PASS
-24,cache_random,328159516,100,75,25,25,0,-1,idle,mixed,uniform,00004000,00010000,100,77,23,22,0,0,0,0,6,17,25,67,592,uniform,mixed,random,build/verilator/traces/stress_024.csv,PASS
+24,cache_random,328159516,100,75,25,25,0,-1,idle,mixed,uniform,00004000,00010000,100,77,23,22,0,0,0,0,6,17,25,66,586,uniform,mixed,random,build/verilator/traces/stress_024.csv,PASS
 25,dirty_eviction,904990943,50,25,75,50,0,-1,idle,mixed,same-set,00004000,00010000,50,9,41,50,0,0,0,0,12,29,50,168,508,same-set,mixed,random,build/verilator/traces/stress_025.csv,PASS
 26,axi_backpressure,1688234644,100,75,75,50,0,-1,idle,single-byte,hot-set,00004000,00010000,100,70,30,0,0,0,0,0,30,0,50,34,189,hot-set,single-byte,random,build/verilator/traces/stress_026.csv,PASS
 27,reset_error,1314223194,100,25,0,75,5,37,idle,full,hot-set,00004000,00010000,100,29,71,0,2,0,1,71,0,0,75,55,305,hot-set,full,random,build/verilator/traces/stress_027.csv,PASS
-28,cache_random,1545659201,100,50,25,50,0,-1,idle,mixed,uniform,00004000,00010000,100,54,46,31,0,0,0,0,15,31,50,199,774,uniform,mixed,random,build/verilator/traces/stress_028.csv,PASS
+28,cache_random,1545659201,100,50,25,50,0,-1,idle,mixed,uniform,00004000,00010000,100,54,46,31,0,0,0,0,15,31,50,206,791,uniform,mixed,random,build/verilator/traces/stress_028.csv,PASS
 29,dirty_eviction,1463476446,100,25,75,50,0,-1,idle,single-byte,same-set,00004000,00010000,100,25,75,100,0,0,0,0,75,0,50,375,1140,same-set,single-byte,random,build/verilator/traces/stress_029.csv,PASS
 30,axi_backpressure,2046426926,100,75,50,25,0,-1,idle,single-byte,uniform,00004000,00010000,100,76,24,50,0,0,0,0,24,0,25,69,604,uniform,single-byte,random,build/verilator/traces/stress_030.csv,PASS
 31,reset_error,1717012494,200,25,75,75,5,25,writeback,full,same-set,00004000,00010000,200,51,149,200,9,8,1,149,0,0,75,2120,3681,same-set,full,random,build/verilator/traces/stress_031.csv,PASS
@@ -38,7 +38,7 @@ scenario,family,seed,operations,read_percent,conflict_percent,backpressure_perce
 36,cache_random,184703014,200,25,50,50,0,-1,idle,mixed,same-set,00004000,00010000,200,56,144,200,0,0,0,0,40,104,50,762,2302,same-set,mixed,random,build/verilator/traces/stress_036.csv,PASS
 37,dirty_eviction,1106673712,100,25,75,75,0,-1,idle,full,same-set,00004000,00010000,100,27,73,100,0,0,0,73,0,0,75,1016,1781,same-set,full,random,build/verilator/traces/stress_037.csv,PASS
 38,axi_backpressure,646462806,100,75,25,50,0,-1,idle,mixed,hot-set,00004000,00010000,100,74,26,0,0,0,0,0,9,17,50,30,185,hot-set,mixed,random,build/verilator/traces/stress_038.csv,PASS
-39,reset_error,1807734982,200,25,75,75,5,65,writeback,full,same-set,00004000,00010000,200,51,149,200,14,13,1,149,0,0,75,2096,3577,same-set,full,random,build/verilator/traces/stress_039.csv,PASS
+39,reset_error,1807734982,200,25,75,75,5,65,writeback,full,same-set,00004000,00010000,200,51,149,200,14,13,1,149,0,0,75,2078,3549,same-set,full,random,build/verilator/traces/stress_039.csv,PASS
 40,cache_random,967518117,200,50,75,50,0,-1,idle,mixed,same-set,00004000,00010000,200,96,104,200,0,0,0,0,25,79,50,630,2040,same-set,mixed,random,build/verilator/traces/stress_040.csv,PASS
 41,dirty_eviction,1623367246,50,25,75,0,0,-1,idle,mixed,same-set,00004000,00010000,50,18,32,50,0,0,0,0,12,20,0,0,390,same-set,mixed,random,build/verilator/traces/stress_041.csv,PASS
 42,axi_backpressure,332393925,100,25,75,25,0,-1,idle,full,sequential,00004000,00010000,100,22,78,0,0,0,0,78,0,0,25,2,67,sequential,full,random,build/verilator/traces/stress_042.csv,PASS

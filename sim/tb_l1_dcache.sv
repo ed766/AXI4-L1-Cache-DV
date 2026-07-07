@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 
-module tb_l1_dcache;
+module tb_l1_dcache #(
+  parameter int CACHE_SETS = 64,
+  parameter int CACHE_WAYS = 2
+);
   logic clk = 0;
   logic rst_n = 0;
   always #5 clk = ~clk;
@@ -34,7 +37,7 @@ module tb_l1_dcache;
   logic mon_hit, mon_miss, mon_evict;
   logic [1:0] mon_refill_beat, mon_writeback_beat;
 
-  l1_dcache_top dut (.*);
+  l1_dcache_top #(.SETS(CACHE_SETS), .WAYS(CACHE_WAYS)) dut (.*);
 
   logic [31:0] memory [0:65535];
   logic memory_touched [0:65535];
@@ -384,6 +387,47 @@ module tb_l1_dcache;
     expect_read(32'h0000_3000, expected);
   endtask
 
+  task automatic run_byte_strobe_lane_matrix;
+    logic [31:0] ignored;
+    logic [31:0] shadow [int unsigned];
+    logic [31:0] bases [0:1];
+    logic [31:0] addr;
+    logic [31:0] data;
+    logic [31:0] expected;
+    logic [3:0] mask;
+    bit error;
+    int stride;
+    int word;
+    int key;
+
+    stride = CACHE_SETS * 32;
+    bases[0] = 32'h0000_e000;
+    bases[1] = bases[0] + stride;
+    expect_read(bases[0], memory[bases[0] >> 2]);
+    expect_read(bases[1], memory[bases[1] >> 2]);
+
+    for (int m = 0; m < 16; m++) begin
+      mask = m[3:0];
+      word = (m * 3) % 8;
+      addr = bases[m[0]] + word*4;
+      key = addr >> 2;
+      if (shadow.exists(key) == 0) shadow[key] = memory[key];
+      data = 32'h8100_0000 ^ (32'(m) * 32'h0102_0304) ^ addr;
+      expected = shadow[key];
+      for (int byte_idx = 0; byte_idx < 4; byte_idx++) begin
+        if (mask[byte_idx])
+          expected[byte_idx*8 +: 8] = data[byte_idx*8 +: 8];
+      end
+      cpu_access(1, addr, data, mask, 2, ignored, error);
+      if (error) begin
+        $error("Byte-strobe matrix write unexpectedly errored mask=%0h addr=%08x", mask, addr);
+        failures++;
+      end
+      shadow[key] = expected;
+      expect_read(addr, expected);
+    end
+  endtask
+
   task automatic run_misaligned;
     logic [31:0] actual;
     bit error;
@@ -555,6 +599,100 @@ module tb_l1_dcache;
     end
   endtask
 
+  task automatic run_set_way_sweep_toggle;
+    logic [31:0] ignored;
+    logic [31:0] line0;
+    logic [31:0] line1;
+    logic [31:0] line2;
+    bit error;
+    int stride;
+    int set_idx;
+
+    stride = CACHE_SETS * 32;
+    for (int n = 0; n < 8; n++) begin
+      case (n)
+        0: set_idx = 0;
+        1: set_idx = 1;
+        2: set_idx = 7;
+        3: set_idx = 15;
+        4: set_idx = 31;
+        5: set_idx = CACHE_SETS / 2;
+        6: set_idx = CACHE_SETS - 2;
+        default: set_idx = CACHE_SETS - 1;
+      endcase
+      line0 = 32'h0000_4000 + set_idx*32;
+      line1 = line0 + stride;
+      line2 = line0 + 2*stride;
+      expect_read(line0, memory[line0 >> 2]);
+      expect_read(line1, memory[line1 >> 2]);
+      cpu_access(1, line0, 32'h5a00_0000 ^ 32'(set_idx), 4'hf, 2, ignored, error);
+      cpu_access(1, line1 + 4, 32'ha500_0000 ^ 32'(set_idx), 4'hf, 2, ignored, error);
+      expect_read(line2, memory[line2 >> 2]);
+      cpu_access(1, line2 + 8, 32'hc300_0000 ^ 32'(set_idx), 4'b0110, 2, ignored, error);
+    end
+    issue_maintenance(2'd1);
+  endtask
+
+  task automatic run_maintenance_boundary_sets;
+    logic [31:0] ignored;
+    logic [31:0] addr0;
+    logic [31:0] addr1;
+    logic [31:0] addr2;
+    logic [31:0] orig0;
+    logic [31:0] orig1;
+    logic [31:0] orig2;
+    logic [31:0] val0;
+    logic [31:0] val1;
+    logic [31:0] val2;
+    logic [31:0] read_expected0;
+    logic [31:0] read_expected1;
+    logic [31:0] read_expected2;
+    bit error;
+    int mid_set;
+    int final_set;
+    int misses_before;
+
+    mid_set = CACHE_SETS / 2;
+    final_set = CACHE_SETS - 1;
+    addr0 = 32'h0000_f000;
+    addr1 = 32'h0000_f000 + mid_set*32;
+    addr2 = 32'h0000_f000 + final_set*32;
+
+    for (int command = 0; command < 3; command++) begin
+      reset_between_operations();
+      orig0 = memory[addr0 >> 2];
+      orig1 = memory[addr1 >> 2];
+      orig2 = memory[addr2 >> 2];
+      val0 = 32'hba00_0000 ^ 32'(command);
+      val1 = 32'hba00_1000 ^ 32'(command);
+      val2 = 32'hba00_2000 ^ 32'(command);
+      cpu_access(1, addr0, val0, 4'hf, 2, ignored, error);
+      cpu_access(1, addr1, val1, 4'hf, 2, ignored, error);
+      cpu_access(1, addr2, val2, 4'hf, 2, ignored, error);
+      misses_before = miss_count;
+      issue_maintenance(command[1:0]);
+
+      if (command == 0 || command == 2) begin
+        if (memory[addr0 >> 2] !== val0 || memory[addr1 >> 2] !== val1 ||
+            memory[addr2 >> 2] !== val2) begin
+          $error("Boundary maintenance command %0d failed final writeback", command);
+          failures++;
+        end
+      end
+
+      read_expected0 = (command == 1) ? orig0 : val0;
+      read_expected1 = (command == 1) ? orig1 : val1;
+      read_expected2 = (command == 1) ? orig2 : val2;
+      expect_read(addr0, read_expected0);
+      expect_read(addr1, read_expected1);
+      expect_read(addr2, read_expected2);
+      if ((command == 1 || command == 2) && miss_count <= misses_before) begin
+        $error("Boundary invalidate command %0d did not force a later miss", command);
+        failures++;
+      end
+    end
+  endtask
+
   task automatic reset_between_operations;
     @(negedge clk); rst_n = 0;
     repeat (3) @(posedge clk);
@@ -607,8 +745,13 @@ module tb_l1_dcache;
       else if (random_addr_profile == "hot-set")
         index = (($urandom_range(0, 7) * 64) + $urandom_range(0, 3) * 8 +
                  $urandom_range(0, 7)) % span_words;
+      else if (random_addr_profile == "two-line-conflict") begin
+        index = (((n % 2) * 128 * 8) + ((n / 2) % 8)) % span_words;
+        conflicts++;
+      end
       else if (random_addr_profile == "same-set" || force_conflict) begin
-        index = (($urandom_range(0, 15) * 64 * 8) + $urandom_range(0, 7)) % span_words;
+        // A 4 KiB stride maps to the same set in both equal-capacity geometries.
+        index = (($urandom_range(0, 15) * 128 * 8) + $urandom_range(0, 7)) % span_words;
         conflicts++;
       end else
         index = $urandom_range(0, span_words - 1);
@@ -766,6 +909,7 @@ module tb_l1_dcache;
       "backpressure": run_backpressure();
       "read_error": run_read_error();
       "byte_strobes": run_byte_strobes();
+      "byte_strobe_lane_matrix": run_byte_strobe_lane_matrix();
       "misaligned": run_misaligned();
       "write_error": run_write_error();
       "maintenance": run_maintenance();
@@ -777,6 +921,8 @@ module tb_l1_dcache;
       "maintenance_error": run_maintenance_error();
       "maintenance_final_dirty": run_maintenance_final_dirty();
       "maintenance_channel_waits": run_maintenance_channel_waits();
+      "set_way_sweep_toggle": run_set_way_sweep_toggle();
+      "maintenance_boundary_sets": run_maintenance_boundary_sets();
       "cross_matrix": run_cross_matrix();
       "performance_workload": run_performance_workload();
       "random": run_random();
