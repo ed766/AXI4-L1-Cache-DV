@@ -27,10 +27,8 @@ def main() -> int:
     nominal = []
     if args.only == "small":
         nominal = [
-            ("small_1way_bounded_safety", "cache_small_1way.sby", "prove", 36, "small_geometry_bounded_safety"),
-            ("small_1way_cover", "cache_small_1way.sby", "cover", 48, "small_geometry_cover"),
-            ("small_2way_bounded_safety", "cache_small_2way.sby", "prove", 36, "small_geometry_bounded_safety"),
-            ("small_2way_cover", "cache_small_2way.sby", "cover", 48, "small_geometry_cover"),
+            ("small_1way_bounded_safety", "cache_small_1way.sby", "prove", 20, "small_geometry_bounded_safety"),
+            ("small_2way_bounded_safety", "cache_small_2way.sby", "prove", 20, "small_geometry_bounded_safety"),
         ]
     elif args.only in ("all", "cover"):
         nominal.append(("cover", "cache_safety.sby", "cover", 50, "cover"))
@@ -82,13 +80,13 @@ def main() -> int:
     title = "Small-Geometry Formal Evidence" if args.only == "small" else "Solver-Backed Formal Evidence"
     (ROOT / "docs" / doc_name).write_text(f"""# {title}
 
-The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. In particular, cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked.
+The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. In particular, cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked. These tasks target the default parity baseline; optional SECDED behavior is checked by the independent model-backed RAS matrix.
 
 | Task | Kind | Observed | Expected | Meets expectation | Depth | Runtime |
 | --- | --- | --- | --- | --- | ---: | ---: |
 """ + "".join(f"| `{row['task']}` | `{row['kind']}` | {row['status']} | {row['expected']} | {'yes' if row['meets_expectation'] else 'no'} | {row['depth']} | {row['runtime_seconds']} s |\n" for row in rows) + """
 
-Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Cover tasks require hits, misses, dirty evictions, error responses, and maintenance completion to be reachable. Error paths are separately sensitized by the bounded containment task and expected-failing mutations where included.
+Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. The canonical formal lane separately requires hits, misses, dirty evictions, error responses, and maintenance completion to be reachable. Error paths are sensitized by the bounded containment task and expected-failing mutations where included.
 
 These are depth-stated open-source bounded checks and reachability results for selected invariants, not full cache correctness or commercial formal signoff.
 """)

@@ -25,7 +25,7 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Equal-capacity associativity checks | `20 / 20` passing |
 | Associativity study points | `14` model-checked points |
 | Solver-backed formal tasks | `5 / 5` meeting expectation |
-| Yosys synthesis proxy | `2 / 2` equal-capacity variants synthesized |
+| Yosys geometry proxy | `2 / 2` equal-capacity storage/control proxies synthesized |
 | Optional SECDED RAS matrix | `1 / 1` passing; `7 / 7` required RAS points |
 
 The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
@@ -77,7 +77,7 @@ make coverage-edges # optional byte-strobe, reset/error, LRU, maintenance, and d
 make performance-sweep
 make associativity-check
 make associativity-characterize
-make synth-characterize # Yosys implementation proxy when Yosys is installed
+make synth-characterize # Yosys associativity-cost proxy when Yosys is installed
 make bug-validate   # expected-failure mutation checks
 make debug-waveform # FST plus deterministic assertion-debug SVG
 make formal-prove   # bounded safety, reachability, and mutation checks
@@ -110,7 +110,7 @@ For a focused design-verification review:
 | Random and coverage | 100 reproducible manifest scenarios, feature coverage, and same-window interaction crosses |
 | Coverage edges | Optional byte-strobe, reset beat matrix, AXI error matrix, LRU/replacement, maintenance-boundary, and direct-mapped structural coverage lane |
 | Debug and automation | Four mutation detections, FST/SVG case study, GitHub Actions, and `make release-check` |
-| Architecture tradeoff | 20 directed geometry checks, 14 model-checked direct-mapped/2-way characterization points, and Yosys proxy synthesis when available |
+| Architecture tradeoff | 20 directed full-RTL geometry checks, 14 model-checked characterization points, and a Yosys associativity-cost proxy |
 | Reliability variant | Optional data SECDED with correction, read scrub, double-error containment, C++ known-answer checks, assertions, and a 7-point RAS matrix |
 | Formal | Depth-stated safety/error checks, reachable covers, and expected mutation failures |
 | AXI subset | Cache-master subset contract mapped to assertions, tests, and reports |

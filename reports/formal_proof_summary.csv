@@ -1,6 +1,6 @@
 task,kind,status,depth,expected,meets_expectation,runtime_seconds,log
-bounded_safety,bounded_safety,PASS,40,PASS,True,3.02,reports/formal_bounded_safety.log
-cover,cover,PASS,50,PASS,True,78.80,reports/formal_cover.log
-error_containment_bmc,bounded_error,PASS,40,PASS,True,9.12,reports/formal_error_containment_bmc.log
-mutation_wlast_early,expected_mutation_failure,FAIL,40,FAIL,True,2.45,reports/formal_mutation_wlast_early.log
-mutation_refill_error_ignore,expected_mutation_failure,FAIL,40,FAIL,True,5.34,reports/formal_mutation_refill_error_ignore.log
+bounded_safety,bounded_safety,PASS,40,PASS,True,64.15,reports/formal_bounded_safety.log
+cover,cover,PASS,50,PASS,True,201.00,reports/formal_cover.log
+error_containment_bmc,bounded_error,PASS,40,PASS,True,61.79,reports/formal_error_containment_bmc.log
+mutation_wlast_early,expected_mutation_failure,FAIL,40,FAIL,True,57.83,reports/formal_mutation_wlast_early.log
+mutation_refill_error_ignore,expected_mutation_failure,FAIL,40,FAIL,True,54.03,reports/formal_mutation_refill_error_ignore.log

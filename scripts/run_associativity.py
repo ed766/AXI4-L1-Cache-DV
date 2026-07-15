@@ -6,7 +6,6 @@ import csv
 import math
 import pathlib
 import re
-import shutil
 import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -72,33 +71,16 @@ def parse_fields(output: str, marker: str) -> dict[str, str]:
 
 
 def yosys_proxy(sets: int, ways: int) -> dict[str, str]:
-    yosys = shutil.which("yosys")
-    if not yosys:
+    summary = REPORTS / "synthesis_characterization.csv"
+    if not summary.exists():
         return {"yosys_status": "SKIP", "yosys_cells": "NA",
                 "yosys_area_proxy": "NA", "timing_proxy": "NA"}
-    work = BUILD / "yosys" / f"sets{sets}_ways{ways}"
-    work.mkdir(parents=True, exist_ok=True)
-    script = work / "synth.ys"
-    log = work / "synth.log"
-    script.write_text(f"""
-read_verilog -sv -D FORMAL -D SYNTHESIS rtl/l1_dcache_top.sv
-chparam -set SETS {sets} -set WAYS {ways} l1_dcache_top
-hierarchy -top l1_dcache_top
-proc
-memory -nomap
-opt
-stat
-""")
-    result = subprocess.run([yosys, "-s", str(script)], cwd=ROOT,
-                            text=True, capture_output=True)
-    log.write_text(result.stdout + result.stderr)
-    if result.returncode:
-        return {"yosys_status": "FAIL", "yosys_cells": "NA",
-                "yosys_area_proxy": "NA", "timing_proxy": "NA"}
-    cell_match = re.findall(r"Number of cells:\s+([0-9]+)", result.stdout)
-    cells = cell_match[-1] if cell_match else "NA"
-    return {"yosys_status": "PASS", "yosys_cells": cells,
-            "yosys_area_proxy": cells, "timing_proxy": "NA"}
+    for row in csv.DictReader(summary.open()):
+        if int(row["sets"]) == sets and int(row["ways"]) == ways:
+            return {"yosys_status": row["status"], "yosys_cells": row["cell_count"],
+                    "yosys_area_proxy": row["area_proxy"], "timing_proxy": row["timing_proxy"]}
+    return {"yosys_status": "SKIP", "yosys_cells": "NA",
+            "yosys_area_proxy": "NA", "timing_proxy": "NA"}
 
 
 def events(path: pathlib.Path) -> list[dict[str, str]]:

@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 zlib1g-dev
+        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 zlib1g-dev yosys
       - name: Run complete release evidence
         run: make release-check
       - name: Verify generated reports are reproducible

@@ -156,6 +156,9 @@ module l1_dcache_top #(
   endfunction
 
   function automatic logic [6:0] secded_encode(input logic [31:0] value);
+`ifdef SYNTHESIS_PROXY_PARITY_BASELINE
+    secded_encode = '0;
+`else
     logic [5:0] hamming;
     logic overall;
     int data_idx;
@@ -172,6 +175,7 @@ module l1_dcache_top #(
     end
     overall = ^{value, hamming};
     secded_encode = {overall, hamming};
+`endif
   endfunction
 
   // {uncorrectable, corrected, corrected_data}
@@ -179,6 +183,9 @@ module l1_dcache_top #(
     input logic [31:0] value,
     input logic [6:0] code
   );
+`ifdef SYNTHESIS_PROXY_PARITY_BASELINE
+    secded_decode = {2'b00, value};
+`else
     logic [5:0] syndrome;
     logic overall_bad;
     logic [31:0] corrected_data;
@@ -201,7 +208,7 @@ module l1_dcache_top #(
       data_idx = 0;
       for (int position = 1; position <= 38; position++) begin
         if ((position & (position - 1)) != 0) begin
-          if (position == int'(syndrome)) corrected_data[data_idx] = ~corrected_data[data_idx];
+          if (syndrome == 6'(position)) corrected_data[data_idx] = ~corrected_data[data_idx];
           data_idx++;
         end
       end
@@ -213,6 +220,7 @@ module l1_dcache_top #(
     end else begin
       secded_decode = {1'b0, 1'b0, corrected_data};
     end
+`endif
   endfunction
 
   function automatic logic [31:0] merge_word(
@@ -231,6 +239,9 @@ module l1_dcache_top #(
     input logic way,
     input logic [INDEX_BITS-1:0] set_idx
   );
+`ifdef SYNTHESIS_PROXY_PARITY_BASELINE
+    line_has_uncorrectable = 1'b0;
+`else
     logic bad;
     logic [33:0] decoded;
     bad = 1'b0;
@@ -239,6 +250,7 @@ module l1_dcache_top #(
       bad |= decoded[33];
     end
     line_has_uncorrectable = bad;
+`endif
   endfunction
 
   logic lookup_victim_way;
@@ -611,7 +623,8 @@ module l1_dcache_top #(
 
       if (m_axi_wvalid) assert(m_axi_wlast == (wb_beat == 3));
       if (!lookup_way0_valid) assert(lookup_victim_way == 0);
-      if (lookup_way0_valid && !lookup_way1_valid) assert(lookup_victim_way == 1);
+      if (WAYS == 2 && lookup_way0_valid && !lookup_way1_valid)
+        assert(lookup_victim_way == 1);
       if (maint_valid) assert(!cpu_req_ready);
       cover(mon_hit);
       cover(mon_miss);

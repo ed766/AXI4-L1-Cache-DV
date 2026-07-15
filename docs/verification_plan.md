@@ -15,7 +15,7 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Formal | Bounded solver-backed safety/error checks, covers, and mutations | `make formal-prove` |
 | Small-geometry formal | Reduced 2-set 1-way/2-way bounded proof and cover lane | `make formal-small-prove` |
 | Associativity | Equal-capacity direct-mapped versus 2-way checks and characterization | `make associativity-characterize` |
-| Synthesis proxy | Yosys cell/memory-count proxy for equal-capacity variants | `make synth-characterize` |
+| Synthesis proxy | Yosys storage/control geometry proxy for equal-capacity variants; full RTL remains behaviorally checked | `make synth-characterize` |
 | Functional coverage | Feature-intent evidence | `make functional-coverage` |
 | Interaction coverage | Same-window cache-specific crosses | `make cache-cross-coverage` |
 | Performance | Per-request latency and throughput sweeps | `make performance-sweep` |
@@ -44,7 +44,7 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - Cache interaction coverage closes at `55 / 55`; feature coverage separately includes explicit read/write hit/miss and clean/dirty replacement scenarios.
 - Code coverage reports raw values and reviewed exclusions without manufacturing activity for cache-array bits; optional coverage-edge runs are reported separately from the baseline 2-way closure.
 - Formal tasks must meet their stated bounded depths; results are not presented as exhaustive proof.
-- Small-geometry formal tasks are reported separately from the full-geometry bounded harness and may skip locally when SymbiYosys is unavailable.
+- Small-geometry formal tasks are reported separately from the full-geometry bounded harness and may skip locally when SymbiYosys is unavailable. Formal tasks target the default parity baseline; optional SECDED behavior has a separate model-backed RAS matrix.
 - Both equal-capacity cache geometries must pass directed and C++ trace checks before characterization is accepted.
 - Yosys synthesis proxy data must be reported as `PASS` when Yosys is available and `SKIP` otherwise; no implementation-cost claim is made from a skipped local run.
 - The AXI4 subset appendix must map each supported protocol rule to an assertion/checker and a directed scenario.

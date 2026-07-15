@@ -19,7 +19,7 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Cache interaction cross coverage | 55 / 55 |
 | Waveform-backed debug cases | 1 / 1 |
 | Solver-backed formal tasks meeting expectation | 5 / 5 |
-| Small-geometry formal tasks meeting expectation | SKIP (sby unavailable locally) |
+| Small-geometry formal tasks meeting expectation | 2 / 2 |
 | Equal-capacity associativity directed checks | 20 / 20 |
 | Associativity characterization points | 14 |
 | Synthesis proxy variants | 2 / 2 |

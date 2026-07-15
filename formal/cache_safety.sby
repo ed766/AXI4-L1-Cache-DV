@@ -13,7 +13,7 @@ prove: abc bmc3
 cover: smtbmc z3
 
 [script]
-read -formal -D FORMAL -D SYNTHESIS l1_dcache_top.sv cache_formal_harness.sv
+read -formal -D FORMAL -D SYNTHESIS -D SYNTHESIS_PROXY_PARITY_BASELINE l1_dcache_top.sv cache_formal_harness.sv
 prep -top cache_formal_harness
 
 [files]

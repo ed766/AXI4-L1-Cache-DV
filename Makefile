@@ -107,7 +107,7 @@ uvm-runtime-smoke: uvm-check-env
 project-check: lint model-test regress model-trace-check functional-coverage performance stress-manifest
 	$(PYTHON) scripts/gen_metrics.py
 
-release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage associativity-check associativity-characterize ras-check
+release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage coverage-edges associativity-check synth-characterize associativity-characterize ras-check
 	$(PYTHON) scripts/run_model_trace.py --traces '*.csv'
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/check_docs.py
