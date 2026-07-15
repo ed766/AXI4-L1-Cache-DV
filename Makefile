@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform docs-check model-test model-trace-check formal formal-prove formal-cover formal-mutations associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
+.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform docs-check model-test model-trace-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
 
 lint:
 	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
@@ -19,10 +19,12 @@ regress:
 coverage:
 	$(PYTHON) scripts/run_regression.py --coverage
 	$(PYTHON) scripts/gen_code_coverage.py
+	$(PYTHON) scripts/gen_coverage_hole_review.py
 
 coverage-edges:
 	$(PYTHON) scripts/run_coverage_edges.py
 	$(PYTHON) scripts/gen_code_coverage.py
+	$(PYTHON) scripts/gen_coverage_hole_review.py
 
 functional-coverage: regress
 	$(PYTHON) scripts/gen_coverage_report.py
@@ -69,6 +71,9 @@ formal:
 formal-prove:
 	$(PYTHON) scripts/run_formal.py
 
+formal-small-prove:
+	$(PYTHON) scripts/run_formal.py --only small
+
 formal-cover:
 	$(PYTHON) scripts/run_formal.py --only cover
 
@@ -80,6 +85,9 @@ associativity-check:
 
 associativity-characterize:
 	$(PYTHON) scripts/run_associativity.py characterize
+
+synth-characterize:
+	$(PYTHON) scripts/run_synthesis_characterization.py
 
 uvm-check-env:
 	$(PYTHON) scripts/check_uvm_env.py

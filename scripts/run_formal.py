@@ -16,7 +16,7 @@ FORMAL = ROOT / "formal"
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--only", choices=("all", "cover", "mutations"), default="all")
+    parser.add_argument("--only", choices=("all", "cover", "mutations", "small"), default="all")
     args = parser.parse_args()
     sby = shutil.which("sby")
     if not sby:
@@ -25,7 +25,14 @@ def main() -> int:
     REPORTS.mkdir(exist_ok=True)
     rows = []
     nominal = []
-    if args.only in ("all", "cover"):
+    if args.only == "small":
+        nominal = [
+            ("small_1way_bounded_safety", "cache_small_1way.sby", "prove", 36, "small_geometry_bounded_safety"),
+            ("small_1way_cover", "cache_small_1way.sby", "cover", 48, "small_geometry_cover"),
+            ("small_2way_bounded_safety", "cache_small_2way.sby", "prove", 36, "small_geometry_bounded_safety"),
+            ("small_2way_cover", "cache_small_2way.sby", "cover", 48, "small_geometry_cover"),
+        ]
+    elif args.only in ("all", "cover"):
         nominal.append(("cover", "cache_safety.sby", "cover", 50, "cover"))
     if args.only == "all":
         nominal = [("bounded_safety", "cache_safety.sby", "prove", 40, "bounded_safety"),
@@ -66,11 +73,14 @@ def main() -> int:
     if not rows:
         print("FORMAL_PROVE|status=FAIL|reason=no_tasks_selected")
         return 1
-    with (REPORTS / "formal_proof_summary.csv").open("w", newline="") as handle:
+    summary_name = "formal_small_proof_summary.csv" if args.only == "small" else "formal_proof_summary.csv"
+    with (REPORTS / summary_name).open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=rows[0].keys(), lineterminator="\n")
         writer.writeheader(); writer.writerows(rows)
     passed = sum(row["meets_expectation"] for row in rows)
-    (ROOT / "docs" / "formal.md").write_text(f"""# Solver-Backed Formal Evidence
+    doc_name = "formal_small.md" if args.only == "small" else "formal.md"
+    title = "Small-Geometry Formal Evidence" if args.only == "small" else "Solver-Backed Formal Evidence"
+    (ROOT / "docs" / doc_name).write_text(f"""# {title}
 
 The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. In particular, cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked.
 
@@ -78,7 +88,7 @@ The SymbiYosys harness separates DUT guarantees from AXI environment assumptions
 | --- | --- | --- | --- | --- | ---: | ---: |
 """ + "".join(f"| `{row['task']}` | `{row['kind']}` | {row['status']} | {row['expected']} | {'yes' if row['meets_expectation'] else 'no'} | {row['depth']} | {row['runtime_seconds']} s |\n" for row in rows) + """
 
-Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Cover tasks require hits, misses, dirty evictions, and maintenance completion to be reachable. Error paths are separately sensitized by the bounded containment task and expected-failing mutations.
+Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Cover tasks require hits, misses, dirty evictions, error responses, and maintenance completion to be reachable. Error paths are separately sensitized by the bounded containment task and expected-failing mutations where included.
 
 These are depth-stated open-source bounded checks and reachability results for selected invariants, not full cache correctness or commercial formal signoff.
 """)

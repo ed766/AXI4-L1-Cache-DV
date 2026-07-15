@@ -1,0 +1,3 @@
+geometry,sets,ways,status,cell_count,wire_bits,memory_count,memory_bits,area_proxy,timing_proxy,log
+direct_mapped,128,1,PASS,46642,499984,0,0,46642,NA,build/synthesis/direct_mapped/yosys.log
+two_way,64,2,PASS,47625,501224,0,0,47625,NA,build/synthesis/two_way/yosys.log

@@ -1,0 +1,21 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode bmc
+prove: depth 36
+cover: mode cover
+cover: depth 48
+
+[engines]
+prove: abc bmc3
+cover: smtbmc z3
+
+[script]
+read -formal -D FORMAL -D SYNTHESIS -D CACHE_SETS=2 -D CACHE_WAYS=2 l1_dcache_top.sv cache_small_geometry_harness.sv
+prep -top cache_small_geometry_harness
+
+[files]
+../rtl/l1_dcache_top.sv
+cache_small_geometry_harness.sv

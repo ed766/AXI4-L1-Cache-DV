@@ -12,7 +12,7 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Functional coverage points | `21 / 21` observed |
 | Compile-time bug mutations | `4 / 4` detected |
 | Manifest-driven stress executions | `100 / 100` passing |
-| C++ trace-replay checks | `127 / 127` generated traces passing |
+| C++ trace-replay checks | `22 / 22` directed traces passing |
 | Cache interaction cross coverage | `55 / 55` bins observed |
 | Named protocol/architecture assertions | `18` |
 | Waveform-backed debug cases | `1 / 1` reproduced |
@@ -20,12 +20,13 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Reviewed design line coverage | `100.00%` |
 | Design branch coverage | `95.00%` |
 | Raw design toggle coverage | `59.49%` |
-| Optional coverage-edge scenarios | `10 / 10` passing |
+| Optional coverage-edge scenarios | `19 / 19` passing |
 | Independent C++ model self-test | `PASS` |
 | Equal-capacity associativity checks | `20 / 20` passing |
 | Associativity study points | `14` model-checked points |
 | Solver-backed formal tasks | `5 / 5` meeting expectation |
-| UVM runtime smoke collateral | limited 3-scenario compatibility lane |
+| UVM runtime smoke collateral | `0 / 3` runtime passing; `3 / 3` compile/equivalent scenarios documented as `SKIP` |
+| Yosys synthesis proxy | target added; local report is `SKIP` when Yosys is unavailable |
 
 The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
 
@@ -71,17 +72,19 @@ make project-check  # lint, C++ model, regression, coverage/report generation
 make release-check  # stress, trace replay, crosses, performance, mutations, code coverage
 make model-trace-check
 make cache-cross-coverage
-make coverage-edges # optional byte-strobe, set/way, maintenance-boundary, and direct-mapped coverage evidence
+make coverage-edges # optional byte-strobe, reset/error, LRU, maintenance, and direct-mapped coverage evidence
 make performance-sweep
 make associativity-check
 make associativity-characterize
+make synth-characterize # Yosys implementation proxy when Yosys is installed
 make bug-validate   # expected-failure mutation checks
 make debug-waveform # FST plus deterministic assertion-debug SVG
 make formal-prove   # bounded safety, reachability, and mutation checks
-make uvm-runtime-smoke # limited UVM compile + runtime-equivalent smoke summary
+make formal-small-prove # reduced-geometry bounded proof/cover lane when sby is installed
+make uvm-runtime-smoke # compile + honest runtime SKIP/TIMEOUT reporting
 ```
 
-The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`, and runtime evidence is limited to a three-scenario compatibility smoke lane rather than closure equivalence.
+The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`. If UVM phase runtime times out, `uvm-runtime-smoke` reports `SKIP` rather than counting equivalent non-UVM scenarios as UVM passes.
 
 ## Reviewer Path
 
@@ -93,8 +96,8 @@ For a focused design-verification review:
 4. Review the [bug diary](docs/bug_diary.md) for four implemented mutation/debug cases.
 5. Follow the [hiring-manager case study](docs/hiring_manager_case_study.md) and [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
 6. Inspect [functional and code coverage](docs/coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
-7. Review the [AXI4 subset compliance appendix](docs/axi_subset_compliance.md) and [equal-capacity associativity study](docs/associativity_characterization.md).
-8. Check [UVM status](docs/uvm_status.md) and [formal evidence](docs/formal.md) for explicit tool and execution boundaries.
+7. Review the [AXI4 subset compliance appendix](docs/axi_subset_compliance.md), [equal-capacity associativity study](docs/associativity_characterization.md), and [synthesis characterization](docs/synthesis_characterization.md).
+8. Check [coverage closure case study](docs/coverage_closure_case_study.md), [UVM status](docs/uvm_status.md), and [formal evidence](docs/formal.md) for explicit tool and execution boundaries.
 
 ## Verification Bar
 
@@ -104,9 +107,9 @@ For a focused design-verification review:
 | AXI and memory checking | Reactive four-beat AXI model plus independent C++ trace replay and final-memory comparison |
 | Assertions | Named CPU, AXI, replacement, maintenance, error-containment, and reset properties |
 | Random and coverage | 100 reproducible manifest scenarios, feature coverage, and same-window interaction crosses |
-| Coverage edges | Optional byte-strobe matrix, set/way sweep, maintenance-boundary, and direct-mapped structural coverage lane |
+| Coverage edges | Optional byte-strobe, reset beat matrix, AXI error matrix, LRU/replacement, maintenance-boundary, and direct-mapped structural coverage lane |
 | Debug and automation | Four mutation detections, FST/SVG case study, GitHub Actions, and `make release-check` |
-| Architecture tradeoff | 20 directed geometry checks and 14 model-checked direct-mapped/2-way characterization points |
+| Architecture tradeoff | 20 directed geometry checks, 14 model-checked direct-mapped/2-way characterization points, and Yosys proxy synthesis when available |
 | Formal | Depth-stated safety/error checks, reachable covers, and expected mutation failures |
 | AXI subset | Cache-master subset contract mapped to assertions, tests, and reports |
 

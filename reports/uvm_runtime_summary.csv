@@ -1,4 +1,4 @@
 test,equivalent_scenario,status,uvm_compile,uvm_phase_runtime,uvm_error,uvm_fatal,equivalent_scenario_status,uvm_log,scenario_log
-uvm_read_miss_refill_test,read_miss,PASS,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_read_miss_refill_test.log,reports/uvm_equiv_read_miss.log
-uvm_dirty_evict_test,dirty_evict,PASS,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_dirty_evict_test.log,reports/uvm_equiv_dirty_evict.log
-uvm_axi_error_path_test,read_error,PASS,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_axi_error_path_test.log,reports/uvm_equiv_read_error.log
+uvm_read_miss_refill_test,read_miss,SKIP,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_read_miss_refill_test.log,reports/uvm_equiv_read_miss.log
+uvm_dirty_evict_test,dirty_evict,SKIP,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_dirty_evict_test.log,reports/uvm_equiv_dirty_evict.log
+uvm_axi_error_path_test,read_error,SKIP,PASS,TIMEOUT,NA,NA,PASS,reports/uvm_axi_error_path_test.log,reports/uvm_equiv_read_error.log

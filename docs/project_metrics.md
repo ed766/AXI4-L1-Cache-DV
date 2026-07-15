@@ -15,15 +15,17 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Functional coverage | 21 / 21 |
 | Implemented bug mutations detected | 4 / 4 |
 | Optional seeded stress scenarios | 100 / 100 |
-| C++ trace-replay checks | 127 / 127 |
+| C++ trace-replay checks | 22 / 22 |
 | Cache interaction cross coverage | 55 / 55 |
 | Waveform-backed debug cases | 1 / 1 |
 | Solver-backed formal tasks meeting expectation | 5 / 5 |
+| Small-geometry formal tasks meeting expectation | SKIP (sby unavailable locally) |
 | Equal-capacity associativity directed checks | 20 / 20 |
 | Associativity characterization points | 14 |
-| UVM runtime smoke collateral | 3 / 3 |
+| Synthesis proxy variants | 2 / 2 |
+| UVM runtime smoke collateral | 0 PASS / 3 SKIP / 3 total |
 | Named protocol/architecture assertions | 18 |
-| Optional coverage-edge scenarios | 10 / 10 |
+| Optional coverage-edge scenarios | 19 / 19 |
 | Design RTL line coverage proxy | 88.10% |
 | Design RTL reviewed line coverage proxy | 100.00% |
 | Design RTL branch coverage proxy | 95.00% |

@@ -11,7 +11,20 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build" / "verilator"
 REPORTS = ROOT / "reports"
 
-EDGE_TESTS = ("byte_strobe_lane_matrix", "set_way_sweep_toggle", "maintenance_boundary_sets")
+EDGE_TESTS = (
+    "byte_strobe_lane_matrix",
+    "set_way_sweep_toggle",
+    "maintenance_boundary_sets",
+    "reset_refill_beat_matrix",
+    "reset_writeback_beat_matrix",
+    "reset_maintenance_scan_matrix",
+    "axi_read_error_beat_matrix",
+    "axi_writeback_error_matrix",
+    "lru_adversarial_walk",
+    "invalid_way_preference_matrix",
+    "maintenance_dirty_error_boundary",
+    "maintenance_backpressure_boundary",
+)
 DIRECT_MAPPED_TESTS = ("read_miss", "read_hit", "write_miss", "write_hit", "clean_evict", "dirty_evict", "maintenance")
 
 
@@ -48,9 +61,10 @@ def compile_binary(name: str, *, sets: int = 64, ways: int = 2) -> pathlib.Path:
         "--assert", "-Wall", "-Wno-UNUSEDSIGNAL", "-Wno-BLKSEQ", "-Wno-SYNCASYNCNET",
         "--top-module", "tb_l1_dcache", "--Mdir", str(out),
         f"-GCACHE_SETS={sets}", f"-GCACHE_WAYS={ways}",
-        "rtl/dcache_pkg.sv", "rtl/l1_dcache_top.sv",
-        "sim/assertions/dcache_protocol_assertions.sv",
-        "sim/monitors/dcache_trace_observer.sv", "sim/tb_l1_dcache.sv",
+        str(ROOT / "rtl" / "dcache_pkg.sv"), str(ROOT / "rtl" / "l1_dcache_top.sv"),
+        str(ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv"),
+        str(ROOT / "sim" / "monitors" / "dcache_trace_observer.sv"),
+        str(ROOT / "sim" / "tb_l1_dcache.sv"),
         str(coverage_main),
     ]
     result = run(command)

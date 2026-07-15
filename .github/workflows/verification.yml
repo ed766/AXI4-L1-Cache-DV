@@ -37,10 +37,30 @@ jobs:
             reports/*.md
             docs/performance.md
             docs/associativity_characterization.md
+            docs/synthesis_characterization.md
             docs/coverage.md
+            docs/coverage_closure_case_study.md
             docs/cross_coverage.md
             docs/images/*debug.svg
             docs/images/associativity_comparison.svg
+
+  synthesis-proxy:
+    needs: quick
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Yosys
+        run: sudo apt-get update && sudo apt-get install -y yosys python3 make
+      - name: Run Yosys synthesis proxy
+        run: make synth-characterize
+      - name: Upload synthesis proxy reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-synthesis-proxy
+          path: |
+            reports/synthesis_characterization.csv
+            docs/synthesis_characterization.md
+            build/synthesis/*/yosys.log
 
   formal-proof:
     runs-on: ubuntu-24.04
@@ -67,6 +87,8 @@ jobs:
           echo "$HOME/.cache/oss-cad-suite/bin" >> "$GITHUB_PATH"
       - name: Prove cache safety properties and expected mutation failures
         run: make formal-prove
+      - name: Run small-geometry bounded formal checks
+        run: make formal-small-prove
       - name: Upload formal reports
         uses: actions/upload-artifact@v4
         with:
@@ -74,4 +96,6 @@ jobs:
           path: |
             reports/formal_*.log
             reports/formal_proof_summary.csv
+            reports/formal_small_proof_summary.csv
             docs/formal.md
+            docs/formal_small.md

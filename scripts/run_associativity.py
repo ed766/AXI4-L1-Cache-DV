@@ -81,9 +81,12 @@ def yosys_proxy(sets: int, ways: int) -> dict[str, str]:
     script = work / "synth.ys"
     log = work / "synth.log"
     script.write_text(f"""
-read_verilog -sv rtl/dcache_pkg.sv rtl/l1_dcache_top.sv
+read_verilog -sv -D FORMAL -D SYNTHESIS rtl/l1_dcache_top.sv
 chparam -set SETS {sets} -set WAYS {ways} l1_dcache_top
-synth -top l1_dcache_top
+hierarchy -top l1_dcache_top
+proc
+memory -nomap
+opt
 stat
 """)
     result = subprocess.run([yosys, "-s", str(script)], cwd=ROOT,

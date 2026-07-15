@@ -45,6 +45,7 @@ module tb_l1_dcache #(
   logic [31:0] wr_addr, rd_addr;
   logic [2:0] wr_beat, rd_beat;
   logic inject_read_error, inject_write_error;
+  integer read_error_beat = 2;
   integer stall_mod = 0;
   integer bp_percent = 0;
   integer random_operations = 100;
@@ -185,7 +186,7 @@ module tb_l1_dcache #(
       if (rd_active && !m_axi_rvalid && allow_ready) begin
         m_axi_rdata <= {memory[(rd_addr >> 2) + rd_beat*2 + 1],
                         memory[(rd_addr >> 2) + rd_beat*2]};
-        m_axi_rresp <= inject_read_error && rd_beat == 2 ? 2'b10 : 2'b00;
+        m_axi_rresp <= inject_read_error && rd_beat == read_error_beat[2:0] ? 2'b10 : 2'b00;
         m_axi_rlast <= rd_beat == 3;
         m_axi_rvalid <= 1;
       end
@@ -210,6 +211,7 @@ module tb_l1_dcache #(
     maint_cmd = 0;
     inject_read_error = 0;
     inject_write_error = 0;
+    read_error_beat = 2;
     repeat (4) @(posedge clk);
     rst_n = 1;
     repeat (2) @(posedge clk);
@@ -693,6 +695,272 @@ module tb_l1_dcache #(
     end
   endtask
 
+  task automatic run_reset_refill_beat_matrix;
+    logic [31:0] addr;
+    for (int beat = 0; beat < 4; beat++) begin
+      reset_between_operations();
+      addr = 32'h0001_0000 + beat*32;
+      @(negedge clk);
+      cpu_req_valid = 1;
+      cpu_req_addr = addr;
+      cpu_req_write = 0;
+      cpu_req_wdata = 0;
+      cpu_req_wstrb = 0;
+      cpu_req_size = 2;
+      cpu_req_id = next_id[7:0];
+      next_id++;
+      do @(posedge clk); while (!cpu_req_ready);
+      @(negedge clk); cpu_req_valid = 0;
+      do @(posedge clk); while (!(mon_state == 5'd6 && mon_refill_beat == beat[1:0]));
+      @(negedge clk); rst_n = 0;
+      repeat (3) @(posedge clk);
+      @(negedge clk); rst_n = 1;
+      repeat (3) @(posedge clk);
+      if (cpu_rsp_valid) begin
+        $error("Reset during refill beat %0d created a ghost response", beat);
+        failures++;
+      end
+      expect_read(addr, memory[addr >> 2]);
+    end
+  endtask
+
+  task automatic run_reset_writeback_beat_matrix;
+    logic [31:0] ignored;
+    logic [31:0] line0;
+    logic [31:0] line1;
+    logic [31:0] line2;
+    bit error;
+    int stride;
+    stride = CACHE_SETS * 32;
+    for (int beat = 0; beat < 4; beat++) begin
+      reset_between_operations();
+      line0 = 32'h0001_1000 + beat*32;
+      line1 = line0 + stride;
+      line2 = line0 + 2*stride;
+      cpu_access(1, line0, 32'hde00_1000 ^ 32'(beat), 4'hf, 2, ignored, error);
+      expect_read(line1, memory[line1 >> 2]);
+      @(negedge clk);
+      cpu_req_valid = 1;
+      cpu_req_addr = line2;
+      cpu_req_write = 0;
+      cpu_req_wdata = 0;
+      cpu_req_wstrb = 0;
+      cpu_req_size = 2;
+      cpu_req_id = next_id[7:0];
+      next_id++;
+      do @(posedge clk); while (!cpu_req_ready);
+      @(negedge clk); cpu_req_valid = 0;
+      do @(posedge clk); while (!(mon_state == 5'd3 && mon_writeback_beat == beat[1:0]));
+      @(negedge clk); rst_n = 0;
+      repeat (3) @(posedge clk);
+      @(negedge clk); rst_n = 1;
+      repeat (3) @(posedge clk);
+      if (cpu_rsp_valid) begin
+        $error("Reset during writeback beat %0d created a ghost response", beat);
+        failures++;
+      end
+      expect_read(line2, memory[line2 >> 2]);
+    end
+  endtask
+
+  task automatic run_reset_maintenance_scan_matrix;
+    logic [31:0] ignored;
+    logic [31:0] addr;
+    int target_sets [0:2];
+    bit error;
+    target_sets[0] = 0;
+    target_sets[1] = CACHE_SETS / 2;
+    target_sets[2] = CACHE_SETS - 1;
+    for (int idx = 0; idx < 3; idx++) begin
+      reset_between_operations();
+      for (int fill_idx = 0; fill_idx < 3; fill_idx++) begin
+        addr = 32'h0001_4000 + target_sets[fill_idx]*32;
+        cpu_access(1, addr, 32'h5c00_0000 ^ 32'(idx) ^ 32'(fill_idx), 4'hf, 2,
+                   ignored, error);
+      end
+      @(negedge clk);
+      maint_valid = 1;
+      maint_cmd = 2'd2;
+      do @(posedge clk); while (!maint_ready);
+      @(negedge clk); maint_valid = 0;
+      do @(posedge clk); while (!(mon_state == 5'd10 && int'(dut.maint_set) == target_sets[idx]));
+      @(negedge clk); rst_n = 0;
+      repeat (3) @(posedge clk);
+      @(negedge clk); rst_n = 1;
+      repeat (3) @(posedge clk);
+      if (maint_done || cpu_rsp_valid) begin
+        $error("Reset during maintenance scan set %0d left stale done/response", target_sets[idx]);
+        failures++;
+      end
+      expect_read(32'h0001_4000 + target_sets[idx]*32,
+                  memory[(32'h0001_4000 + target_sets[idx]*32) >> 2]);
+    end
+  endtask
+
+  task automatic run_axi_read_error_beat_matrix;
+    logic [31:0] actual;
+    bit error;
+    int miss_before;
+    for (int beat = 0; beat < 4; beat++) begin
+      reset_between_operations();
+      read_error_beat = beat;
+      inject_read_error = 1;
+      miss_before = miss_count;
+      cpu_access(0, 32'h0001_8000 + beat*32, 0, 0, 2, actual, error);
+      if (!error) begin
+        $error("Read error beat %0d was not reported", beat);
+        failures++;
+      end
+      inject_read_error = 0;
+      expect_read(32'h0001_8000 + beat*32, memory[(32'h0001_8000 + beat*32) >> 2]);
+      if (miss_count <= miss_before + 1) begin
+        $error("Failed refill beat %0d installed a valid line", beat);
+        failures++;
+      end
+    end
+    read_error_beat = 2;
+  endtask
+
+  task automatic run_axi_writeback_error_matrix;
+    logic [31:0] ignored;
+    logic [31:0] line0;
+    logic [31:0] line1;
+    logic [31:0] line2;
+    bit error;
+    int stride;
+    stride = CACHE_SETS * 32;
+
+    reset_between_operations();
+    line0 = 32'h0001_9000;
+    line1 = line0 + stride;
+    line2 = line0 + 2*stride;
+    cpu_access(1, line0, 32'hbeef_9000, 4'hf, 2, ignored, error);
+    expect_read(line1, memory[line1 >> 2]);
+    inject_write_error = 1;
+    cpu_access(0, line2, 0, 0, 2, ignored, error);
+    if (!error) begin $error("Dirty eviction writeback error was not reported"); failures++; end
+    inject_write_error = 0;
+    expect_read(line0, 32'hbeef_9000);
+
+    reset_between_operations();
+    line0 = 32'h0001_a000;
+    cpu_access(1, line0, 32'hbeef_a000, 4'hf, 2, ignored, error);
+    inject_write_error = 1;
+    @(negedge clk); maint_valid = 1; maint_cmd = 2'd0;
+    do @(posedge clk); while (!maint_ready);
+    @(negedge clk); maint_valid = 0;
+    do @(posedge clk); while (!maint_done);
+    if (!maint_error) begin $error("Maintenance writeback error was not reported"); failures++; end
+    inject_write_error = 0;
+    expect_read(line0, 32'hbeef_a000);
+  endtask
+
+  task automatic run_lru_adversarial_walk;
+    logic [31:0] line0;
+    logic [31:0] line1;
+    logic [31:0] line2;
+    int stride;
+    stride = CACHE_SETS * 32;
+    for (int set_idx = 0; set_idx < 8; set_idx++) begin
+      reset_between_operations();
+      line0 = 32'h0001_b000 + set_idx*32;
+      line1 = line0 + stride;
+      line2 = line0 + 2*stride;
+      expect_read(line0, memory[line0 >> 2]);
+      expect_read(line1, memory[line1 >> 2]);
+      expect_read((set_idx[0]) ? line0 : line1, memory[((set_idx[0]) ? line0 : line1) >> 2]);
+      expect_read(line2, memory[line2 >> 2]);
+    end
+  endtask
+
+  task automatic run_invalid_way_preference_matrix;
+    logic [31:0] line0;
+    logic [31:0] line1;
+    int stride;
+    int set_points [0:2];
+    int evict_before;
+    if (CACHE_WAYS < 2) return;
+    stride = CACHE_SETS * 32;
+    set_points[0] = 0;
+    set_points[1] = CACHE_SETS / 2;
+    set_points[2] = CACHE_SETS - 1;
+    for (int idx = 0; idx < 3; idx++) begin
+      reset_between_operations();
+      line0 = 32'h0001_c000 + set_points[idx]*32;
+      line1 = line0 + stride;
+      evict_before = eviction_count;
+      expect_read(line0, memory[line0 >> 2]);
+      expect_read(line1, memory[line1 >> 2]);
+      if (eviction_count != evict_before) begin
+        $error("Invalid-way preference failed for set %0d", set_points[idx]);
+        failures++;
+      end
+    end
+  endtask
+
+  task automatic run_maintenance_dirty_error_boundary;
+    logic [31:0] ignored;
+    logic [31:0] addr;
+    int set_points [0:2];
+    bit error;
+    set_points[0] = 0;
+    set_points[1] = CACHE_SETS / 2;
+    set_points[2] = CACHE_SETS - 1;
+    for (int command = 0; command < 3; command += 2) begin
+      for (int idx = 0; idx < 3; idx++) begin
+        reset_between_operations();
+        addr = 32'h0001_d000 + set_points[idx]*32;
+        cpu_access(1, addr, 32'had00_0000 ^ 32'(command) ^ 32'(idx), 4'hf, 2,
+                   ignored, error);
+        inject_write_error = 1;
+        @(negedge clk); maint_valid = 1; maint_cmd = command[1:0];
+        do @(posedge clk); while (!maint_ready);
+        @(negedge clk); maint_valid = 0;
+        do @(posedge clk); while (!maint_done);
+        if (!maint_error) begin
+          $error("Dirty boundary maintenance command %0d set %0d missed error", command,
+                 set_points[idx]);
+          failures++;
+        end
+        inject_write_error = 0;
+        expect_read(addr, 32'had00_0000 ^ 32'(command) ^ 32'(idx));
+      end
+    end
+  endtask
+
+  task automatic run_maintenance_backpressure_boundary;
+    logic [31:0] ignored;
+    logic [31:0] addrs [0:2];
+    logic [31:0] vals [0:2];
+    int set_points [0:2];
+    bit error;
+    set_points[0] = 0;
+    set_points[1] = CACHE_SETS / 2;
+    set_points[2] = CACHE_SETS - 1;
+    for (int command = 0; command < 3; command++) begin
+      reset_between_operations();
+      for (int idx = 0; idx < 3; idx++) begin
+        addrs[idx] = 32'h0001_e000 + set_points[idx]*32;
+        vals[idx] = 32'hbc00_0000 ^ 32'(command) ^ 32'(idx);
+        cpu_access(1, addrs[idx], vals[idx], 4'hf, 2, ignored, error);
+      end
+      aw_stall_budget = 2;
+      w_stall_budget = 2;
+      b_delay_cfg = 2;
+      issue_maintenance(command[1:0]);
+      b_delay_cfg = 0;
+      if (command == 0 || command == 2) begin
+        for (int idx = 0; idx < 3; idx++) begin
+          if (memory[addrs[idx] >> 2] !== vals[idx]) begin
+            $error("Maintenance backpressure command %0d did not flush set %0d", command,
+                   set_points[idx]);
+            failures++;
+          end
+        end
+      end
+    end
+  endtask
+
   task automatic reset_between_operations;
     @(negedge clk); rst_n = 0;
     repeat (3) @(posedge clk);
@@ -923,6 +1191,15 @@ module tb_l1_dcache #(
       "maintenance_channel_waits": run_maintenance_channel_waits();
       "set_way_sweep_toggle": run_set_way_sweep_toggle();
       "maintenance_boundary_sets": run_maintenance_boundary_sets();
+      "reset_refill_beat_matrix": run_reset_refill_beat_matrix();
+      "reset_writeback_beat_matrix": run_reset_writeback_beat_matrix();
+      "reset_maintenance_scan_matrix": run_reset_maintenance_scan_matrix();
+      "axi_read_error_beat_matrix": run_axi_read_error_beat_matrix();
+      "axi_writeback_error_matrix": run_axi_writeback_error_matrix();
+      "lru_adversarial_walk": run_lru_adversarial_walk();
+      "invalid_way_preference_matrix": run_invalid_way_preference_matrix();
+      "maintenance_dirty_error_boundary": run_maintenance_dirty_error_boundary();
+      "maintenance_backpressure_boundary": run_maintenance_backpressure_boundary();
       "cross_matrix": run_cross_matrix();
       "performance_workload": run_performance_workload();
       "random": run_random();

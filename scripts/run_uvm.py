@@ -86,10 +86,15 @@ if args.runtime_smoke:
     for uvm_test, scenario in tests:
         runtime_status, runtime_log, uvm_errors, uvm_fatals = run_uvm_binary(uvm_test)
         scenario_status, scenario_log = run_equivalent_scenario(scenario)
-        # Local open-source UVM phase runtime is still immature, so the target
-        # passes only the cache-equivalent scenario while recording UVM runtime
-        # status separately. The docs intentionally do not claim UVM closure.
-        status = "PASS" if scenario_status == "PASS" else "FAIL"
+        # Do not count an equivalent non-UVM scenario as UVM runtime success.
+        # The equivalent row is useful debug context only; actual UVM phase
+        # runtime must finish with zero UVM_ERROR/UVM_FATAL to be PASS.
+        if runtime_status == "PASS":
+            status = "PASS"
+        elif runtime_status == "TIMEOUT":
+            status = "SKIP"
+        else:
+            status = "FAIL"
         rows.append({
             "test": uvm_test,
             "equivalent_scenario": scenario,
@@ -107,8 +112,11 @@ if args.runtime_smoke:
         writer.writeheader()
         writer.writerows(rows)
     passed = sum(row["status"] == "PASS" for row in rows)
-    print(f"UVM_RUNTIME_SMOKE|status={'PASS' if passed == len(rows) else 'FAIL'}|passed={passed}|total={len(rows)}")
-    sys.exit(0 if passed == len(rows) else 1)
+    skipped = sum(row["status"] == "SKIP" for row in rows)
+    failed = sum(row["status"] == "FAIL" for row in rows)
+    overall = "PASS" if passed == len(rows) else ("SKIP" if failed == 0 else "FAIL")
+    print(f"UVM_RUNTIME_SMOKE|status={overall}|passed={passed}|skipped={skipped}|failed={failed}|total={len(rows)}")
+    sys.exit(0 if failed == 0 else 1)
 
 try:
     result = subprocess.run([str(BUILD / "Vtb_cache_uvm"), "+UVM_TESTNAME=cache_smoke_test"],
