@@ -1,0 +1,8 @@
+point,status
+single_data_corrected_clean,COVERED
+single_ecc_corrected,COVERED
+double_data_detected_clean,COVERED
+single_data_corrected_dirty_writeback,COVERED
+double_data_blocks_dirty_eviction,COVERED
+single_data_corrected_maintenance,COVERED
+double_data_detected_maintenance,COVERED

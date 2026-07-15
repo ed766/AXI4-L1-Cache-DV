@@ -71,6 +71,12 @@ uvm_hit = sum(row.get("status") == "PASS" for row in uvm_rows)
 uvm_skip = sum(row.get("status") == "SKIP" for row in uvm_rows)
 uvm_result = (f"{uvm_hit} PASS / {uvm_skip} SKIP / {len(uvm_rows)} total"
               if uvm_rows else "NA")
+ras_path = ROOT / "reports" / "ras_summary.csv"
+ras_rows = list(csv.DictReader(ras_path.open())) if ras_path.exists() else []
+ras_pass = sum(row.get("status") == "PASS" for row in ras_rows)
+ras_cov_path = ROOT / "reports" / "ras_coverage.csv"
+ras_cov_rows = list(csv.DictReader(ras_cov_path.open())) if ras_cov_path.exists() else []
+ras_cov = sum(row.get("status") == "COVERED" for row in ras_cov_rows)
 assertion_text = (ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv").read_text()
 assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", assertion_text)))
 text = f"""# Project Metrics
@@ -99,6 +105,8 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Associativity characterization points | {len(assoc_char_rows)} |
 | Synthesis proxy variants | {synth_result} |
 | UVM runtime smoke collateral | {uvm_result} |
+| Optional SECDED RAS matrix | {ras_pass} / {len(ras_rows)} |
+| SECDED RAS coverage | {ras_cov} / {len(ras_cov_rows)} |
 | Named protocol/architecture assertions | {assertion_count} |
 | Optional coverage-edge scenarios | {edge_pass} / {len(edge_rows)} |
 | Design RTL line coverage proxy | {rtl_line_pct:.2f}% |
@@ -111,6 +119,7 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 
 - Results are report-backed local verification closure, not commercial signoff.
 - UVM is secondary methodology collateral; runtime reporting is limited and separated from closure.
+- SECDED is a separately verified structural variant; the parity baseline remains the canonical cache configuration.
 - Formal results are depth-stated bounded safety/error checks plus reachability covers and expected mutation failures, not exhaustive proof of cache correctness.
 - AXI4 behavior is a constrained cache-master subset, not an AXI compliance certification.
 """

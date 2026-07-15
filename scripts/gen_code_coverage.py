@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import functools
 import pathlib
 import re
 import subprocess
@@ -39,7 +40,39 @@ def point_kind(descriptor: str) -> str:
     }.get(page.group(1).split("/", 1)[0], page.group(1).removeprefix("v_"))
 
 
-def exclusion(point_type: str, line: int, object_name: str) -> str:
+@functools.lru_cache(maxsize=None)
+def secded_function_lines(source: str) -> set[int]:
+    path = pathlib.Path(source)
+    if not path.is_absolute():
+        path = ROOT / path
+    if not path.exists():
+        return set()
+    result: set[int] = set()
+    in_optional_function = False
+    for number, text in enumerate(path.read_text().splitlines(), 1):
+        if "function automatic" in text and any(name in text for name in
+                ("secded_encode", "secded_decode", "line_has_uncorrectable")):
+            in_optional_function = True
+        if in_optional_function:
+            result.add(number)
+        if in_optional_function and "endfunction" in text:
+            in_optional_function = False
+    return result
+
+
+def exclusion(group: str, point_type: str, source: str, line: int, object_name: str) -> str:
+    source_path = pathlib.Path(source)
+    source_text = ""
+    candidate = source_path if source_path.is_absolute() else ROOT / source_path
+    if candidate.exists() and line > 0:
+        lines = candidate.read_text().splitlines()
+        if line <= len(lines):
+            source_text = lines[line - 1]
+    if (group in ("baseline_2way", "coverage_edges_2way", "direct_mapped_variant") and
+            point_type in ("line", "branch", "expression", "toggle") and
+            (line in secded_function_lines(source) or "SECDED_ENABLE" in source_text or
+             object_name.startswith("ecc_"))):
+        return "compile_time_inactive_secded_variant"
     if point_type == "line" and object_name == "case" and line > 350:
         return "unreachable_defensive_default"
     if point_type == "line" and object_name == "block" and line >= 385:
@@ -81,7 +114,7 @@ def summarize(group: str, files: list[pathlib.Path]) -> tuple[list[dict[str, str
         reviewed_total = reviewed_hit = 0
         for descriptor, count in values.items():
             source, line, object_name = metadata(descriptor)
-            reason = exclusion(point_type, line, object_name)
+            reason = exclusion(group, point_type, source, line, object_name)
             if reason:
                 excluded += 1
             else:

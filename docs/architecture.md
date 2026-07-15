@@ -10,13 +10,13 @@ For the baseline 32-byte line and 64-set, 2-way geometry:
 
 The equal-capacity direct-mapped variant uses 128 sets, so `address[11:5]` is the index and `address[31:12]` is the tag. Both geometries contain 128 total lines and therefore remain 4 KiB.
 
-Each line stores eight 32-bit words. Two words are transferred on every 64-bit AXI beat.
+Each line stores eight 32-bit words. Two words are transferred on every 64-bit AXI beat. The baseline stores one parity bit per word. The optional SECDED variant stores a seven-bit code per word; parity and SECDED are mutually exclusive elaboration-time configurations.
 
 ## Request Behavior
 
 The CPU request is accepted only in `IDLE`. The controller latches address, operation, data, strobes, size, and transaction ID. Aligned 8-, 16-, and 32-bit requests are supported; a misaligned request returns an error without changing cache state.
 
-A hit completes from the selected way. Stores merge bytes according to `wstrb`, regenerate parity, and mark the line dirty. A 2-way miss chooses an invalid way before consulting the per-set LRU bit; direct-mapped mode always selects way zero and contains no active replacement policy.
+A hit completes from the selected way. Stores merge bytes according to `wstrb`, regenerate integrity metadata, and mark the line dirty. In SECDED mode, a single-bit data or code fault is corrected and a read scrubs the repaired word; a double-bit fault returns `cpu_rsp_error` without modifying the line. A 2-way miss chooses an invalid way before consulting the per-set LRU bit; direct-mapped mode always selects way zero and contains no active replacement policy.
 
 ## Miss Flow
 
@@ -28,6 +28,8 @@ A hit completes from the selected way. Stores merge bytes according to `wstrb`, 
 6. Replay the original CPU request.
 
 AXI read or write errors become CPU-visible errors. A failed refill does not install the new line. A failed writeback leaves the victim dirty.
+
+In SECDED mode, writeback data passes through the decoder so a dirty line with a correctable fault reaches memory with repaired data. An uncorrectable dirty victim is contained before AXI writeback or refill begins.
 
 ## Maintenance
 

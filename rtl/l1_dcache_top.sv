@@ -2,7 +2,8 @@
 module l1_dcache_top #(
   parameter int SETS = 64,
   parameter int WAYS = 2,
-  parameter bit PARITY_ENABLE = 1'b1
+  parameter bit PARITY_ENABLE = 1'b1,
+  parameter bit SECDED_ENABLE = 1'b0
 ) (
   input  logic        clk,
   input  logic        rst_n,
@@ -100,6 +101,8 @@ module l1_dcache_top #(
       $fatal(1, "l1_dcache_top supports SETS=64 or SETS=128");
     if (SETS * WAYS != 128)
       $fatal(1, "cache geometry must remain 4 KiB (SETS*WAYS=128)");
+    if (PARITY_ENABLE && SECDED_ENABLE)
+      $fatal(1, "PARITY_ENABLE and SECDED_ENABLE are mutually exclusive");
   end
 `endif
 
@@ -113,6 +116,7 @@ module l1_dcache_top #(
   logic dirty_bits [WAYS][SETS];
   logic [31:0] data_mem [WAYS][SETS][WORDS_PER_LINE];
   logic parity_mem [WAYS][SETS][WORDS_PER_LINE];
+  logic [6:0] ecc_mem [WAYS][SETS][WORDS_PER_LINE];
   logic lru [SETS];
   logic [31:0] refill_buf [WORDS_PER_LINE];
 
@@ -131,6 +135,9 @@ module l1_dcache_top #(
   logic [INDEX_BITS-1:0] maint_set;
   logic maint_way;
   logic maint_error_q;
+  logic ecc_corrected_pulse;
+  logic ecc_uncorrectable_pulse;
+  logic ecc_scrub_write;
 
   wire [INDEX_BITS-1:0] req_set = req_addr_q[OFFSET_BITS + INDEX_BITS - 1:OFFSET_BITS];
   wire [TAG_BITS-1:0] req_tag = req_addr_q[31:OFFSET_BITS + INDEX_BITS];
@@ -148,6 +155,66 @@ module l1_dcache_top #(
     word_parity = ^value;
   endfunction
 
+  function automatic logic [6:0] secded_encode(input logic [31:0] value);
+    logic [5:0] hamming;
+    logic overall;
+    int data_idx;
+    hamming = '0;
+    for (int parity = 0; parity < 6; parity++) begin
+      data_idx = 0;
+      for (int position = 1; position <= 38; position++) begin
+        if ((position & (position - 1)) != 0) begin
+          if ((position & (1 << parity)) != 0)
+            hamming[parity] ^= value[data_idx];
+          data_idx++;
+        end
+      end
+    end
+    overall = ^{value, hamming};
+    secded_encode = {overall, hamming};
+  endfunction
+
+  // {uncorrectable, corrected, corrected_data}
+  function automatic logic [33:0] secded_decode(
+    input logic [31:0] value,
+    input logic [6:0] code
+  );
+    logic [5:0] syndrome;
+    logic overall_bad;
+    logic [31:0] corrected_data;
+    int data_idx;
+    syndrome = '0;
+    corrected_data = value;
+    for (int parity = 0; parity < 6; parity++) begin
+      syndrome[parity] = code[parity];
+      data_idx = 0;
+      for (int position = 1; position <= 38; position++) begin
+        if ((position & (position - 1)) != 0) begin
+          if ((position & (1 << parity)) != 0)
+            syndrome[parity] ^= value[data_idx];
+          data_idx++;
+        end
+      end
+    end
+    overall_bad = ^{value, code};
+    if (syndrome != 0 && overall_bad) begin
+      data_idx = 0;
+      for (int position = 1; position <= 38; position++) begin
+        if ((position & (position - 1)) != 0) begin
+          if (position == int'(syndrome)) corrected_data[data_idx] = ~corrected_data[data_idx];
+          data_idx++;
+        end
+      end
+      secded_decode = {1'b0, 1'b1, corrected_data};
+    end else if (syndrome == 0 && overall_bad) begin
+      secded_decode = {1'b0, 1'b1, corrected_data};
+    end else if (syndrome != 0) begin
+      secded_decode = {1'b1, 1'b0, corrected_data};
+    end else begin
+      secded_decode = {1'b0, 1'b0, corrected_data};
+    end
+  endfunction
+
   function automatic logic [31:0] merge_word(
     input logic [31:0] old_word,
     input logic [31:0] new_word,
@@ -158,6 +225,20 @@ module l1_dcache_top #(
     for (int b = 0; b < 4; b++)
       if (strobes[b]) result[b*8 +: 8] = new_word[b*8 +: 8];
     merge_word = result;
+  endfunction
+
+  function automatic logic line_has_uncorrectable(
+    input logic way,
+    input logic [INDEX_BITS-1:0] set_idx
+  );
+    logic bad;
+    logic [33:0] decoded;
+    bad = 1'b0;
+    for (int word = 0; word < WORDS_PER_LINE; word++) begin
+      decoded = secded_decode(data_mem[way][set_idx][word], ecc_mem[way][set_idx][word]);
+      bad |= decoded[33];
+    end
+    line_has_uncorrectable = bad;
   endfunction
 
   logic lookup_victim_way;
@@ -185,12 +266,20 @@ module l1_dcache_top #(
   endgenerate
   wire lookup_victim_valid = valid_bits[lookup_victim_way][req_set];
   wire lookup_victim_dirty = dirty_bits[lookup_victim_way][req_set];
+  wire lookup_victim_uncorrectable = SECDED_ENABLE && lookup_victim_valid &&
+      line_has_uncorrectable(lookup_victim_way, req_set);
   wire lookup_lru = lru[req_set];
   wire active_victim_valid = valid_bits[victim_way][victim_set];
   wire active_victim_dirty = dirty_bits[victim_way][victim_set];
   wire [TAG_BITS-1:0] active_victim_tag = tags[victim_way][victim_set];
   wire maint_line_valid = valid_bits[maint_way][maint_set];
   wire maint_line_dirty = dirty_bits[maint_way][maint_set];
+  wire [33:0] wb_decode_lo = secded_decode(
+      data_mem[victim_way][victim_set][wb_beat*2],
+      ecc_mem[victim_way][victim_set][wb_beat*2]);
+  wire [33:0] wb_decode_hi = secded_decode(
+      data_mem[victim_way][victim_set][wb_beat*2+1],
+      ecc_mem[victim_way][victim_set][wb_beat*2+1]);
 
   assign cpu_req_ready = state == ST_IDLE && !maint_valid;
   assign maint_ready = state == ST_IDLE;
@@ -205,8 +294,9 @@ module l1_dcache_top #(
     m_axi_awsize = 3'd3;
     m_axi_awburst = 2'b01;
     m_axi_awvalid = state == ST_WB_AW || state == ST_MAINT_WB_AW;
-    m_axi_wdata = {data_mem[victim_way][victim_set][wb_beat*2+1],
-                   data_mem[victim_way][victim_set][wb_beat*2]};
+    m_axi_wdata = SECDED_ENABLE ? {wb_decode_hi[31:0], wb_decode_lo[31:0]} :
+                                  {data_mem[victim_way][victim_set][wb_beat*2+1],
+                                   data_mem[victim_way][victim_set][wb_beat*2]};
     m_axi_wstrb = 8'hff;
 `ifdef CACHE_BUG_WLAST_EARLY
     m_axi_wlast = wb_beat == 2;
@@ -238,6 +328,9 @@ module l1_dcache_top #(
       wb_beat <= '0;
       refill_beat <= '0;
       refill_error <= 1'b0;
+      ecc_corrected_pulse <= 1'b0;
+      ecc_uncorrectable_pulse <= 1'b0;
+      ecc_scrub_write <= 1'b0;
       mon_hit <= 1'b0;
       mon_miss <= 1'b0;
       mon_evict <= 1'b0;
@@ -253,6 +346,9 @@ module l1_dcache_top #(
       mon_hit <= 1'b0;
       mon_miss <= 1'b0;
       mon_evict <= 1'b0;
+      ecc_corrected_pulse <= 1'b0;
+      ecc_uncorrectable_pulse <= 1'b0;
+      ecc_scrub_write <= 1'b0;
 
       if (cpu_rsp_valid && cpu_rsp_ready) cpu_rsp_valid <= 1'b0;
 
@@ -287,21 +383,38 @@ module l1_dcache_top #(
           end else if (hit) begin
             logic [31:0] current_word;
             logic [31:0] updated_word;
-            current_word = data_mem[hit_way][req_set][req_word];
+            logic [33:0] decoded_word;
+            decoded_word = secded_decode(data_mem[hit_way][req_set][req_word],
+                                         ecc_mem[hit_way][req_set][req_word]);
+            current_word = SECDED_ENABLE ? decoded_word[31:0] :
+                                           data_mem[hit_way][req_set][req_word];
             mon_hit <= 1'b1;
             cpu_rsp_id <= req_id_q;
-            cpu_rsp_error <= PARITY_ENABLE &&
-                             (parity_mem[hit_way][req_set][req_word] != word_parity(current_word));
-            if (req_write_q) begin
+            cpu_rsp_error <= SECDED_ENABLE ? decoded_word[33] :
+                (PARITY_ENABLE &&
+                 (parity_mem[hit_way][req_set][req_word] != word_parity(current_word)));
+            if (SECDED_ENABLE && decoded_word[33]) begin
+              ecc_uncorrectable_pulse <= 1'b1;
+              cpu_rsp_rdata <= '0;
+            end else if (req_write_q) begin
               updated_word = merge_word(current_word, req_wdata_q, req_wstrb_q);
               data_mem[hit_way][req_set][req_word] <= updated_word;
               parity_mem[hit_way][req_set][req_word] <= word_parity(updated_word);
+              ecc_mem[hit_way][req_set][req_word] <= secded_encode(updated_word);
+              if (SECDED_ENABLE && decoded_word[32])
+                ecc_corrected_pulse <= 1'b1;
 `ifndef CACHE_BUG_DIRTY_SKIP
               dirty_bits[hit_way][req_set] <= 1'b1;
 `endif
               cpu_rsp_rdata <= '0;
             end else begin
               cpu_rsp_rdata <= current_word;
+              if (SECDED_ENABLE && decoded_word[32]) begin
+                data_mem[hit_way][req_set][req_word] <= current_word;
+                ecc_mem[hit_way][req_set][req_word] <= secded_encode(current_word);
+                ecc_corrected_pulse <= 1'b1;
+                ecc_scrub_write <= 1'b1;
+              end
             end
 `ifdef CACHE_BUG_LRU_INVERT
             lru[req_set] <= hit_way;
@@ -316,7 +429,16 @@ module l1_dcache_top #(
             victim_way <= selected_way;
             victim_set <= req_set;
             mon_miss <= 1'b1;
-            if (valid_bits[selected_way][req_set] && dirty_bits[selected_way][req_set]) begin
+            if (SECDED_ENABLE && valid_bits[selected_way][req_set] &&
+                dirty_bits[selected_way][req_set] &&
+                line_has_uncorrectable(selected_way, req_set)) begin
+              cpu_rsp_rdata <= '0;
+              cpu_rsp_id <= req_id_q;
+              cpu_rsp_error <= 1'b1;
+              cpu_rsp_valid <= 1'b1;
+              ecc_uncorrectable_pulse <= 1'b1;
+              state <= ST_RESPONSE;
+            end else if (valid_bits[selected_way][req_set] && dirty_bits[selected_way][req_set]) begin
               wb_addr_q <= {tags[selected_way][req_set], req_set, {OFFSET_BITS{1'b0}}};
               wb_beat <= '0;
               mon_evict <= 1'b1;
@@ -371,8 +493,9 @@ module l1_dcache_top #(
             state <= ST_RESPONSE;
           end else begin
             for (int word = 0; word < WORDS_PER_LINE; word++) begin
-              data_mem[victim_way][victim_set][word] <= refill_buf[word];
-              parity_mem[victim_way][victim_set][word] <= word_parity(refill_buf[word]);
+              data_mem[victim_way][victim_set][word] = refill_buf[word];
+              parity_mem[victim_way][victim_set][word] = word_parity(refill_buf[word]);
+              ecc_mem[victim_way][victim_set][word] = secded_encode(refill_buf[word]);
             end
             tags[victim_way][victim_set] <= req_tag;
             valid_bits[victim_way][victim_set] <= 1'b1;
@@ -392,6 +515,20 @@ module l1_dcache_top #(
             maint_done <= 1'b1;
             maint_error <= maint_error_q;
             state <= ST_IDLE;
+          end else if (SECDED_ENABLE && dirty_bits[maint_way][maint_set] &&
+                       maint_cmd_q != 2'd1 &&
+                       line_has_uncorrectable(maint_way, maint_set)) begin
+            maint_error_q <= 1'b1;
+            ecc_uncorrectable_pulse <= 1'b1;
+            if (maint_set == LAST_SET && (WAYS == 1 || maint_way)) begin // SECDED_ENABLE branch
+              maint_active_q <= 1'b0;
+              maint_done <= 1'b1;
+              maint_error <= 1'b1;
+              state <= ST_IDLE;
+            end else if (WAYS == 1 || maint_way) begin // SECDED_ENABLE branch
+              maint_way <= 1'b0;
+              maint_set <= maint_set + 1'b1;
+            end else maint_way <= 1'b1;
           end else if (dirty_bits[maint_way][maint_set] && maint_cmd_q != 2'd1) begin
             victim_way <= maint_way;
             victim_set <= maint_set;

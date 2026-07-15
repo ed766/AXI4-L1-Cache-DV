@@ -23,5 +23,18 @@ int main() {
   auto dm_conflict = direct_mapped.access(0x2000, false, 0, 0, 2);
   auto dm_revisit = direct_mapped.access(0x1000, false, 0, 0, 2);
   assert(!dm_cold.hit && !dm_conflict.hit && !dm_revisit.hit);
-  std::cout << "MODEL_RESULT|status=PASS|cases=9|geometries=2\n";
+
+  constexpr uint32_t ecc_word = 0xa55ac33cu;
+  const uint8_t ecc = CacheReference::secded_encode(ecc_word);
+  for (unsigned bit = 0; bit < 32; ++bit) {
+    const auto corrected = CacheReference::secded_decode(ecc_word ^ (1u << bit), ecc);
+    assert(corrected.corrected && !corrected.uncorrectable && corrected.data == ecc_word);
+  }
+  for (unsigned bit = 0; bit < 7; ++bit) {
+    const auto corrected = CacheReference::secded_decode(ecc_word, ecc ^ (1u << bit));
+    assert(corrected.corrected && !corrected.uncorrectable && corrected.data == ecc_word);
+  }
+  const auto double_fault = CacheReference::secded_decode(ecc_word ^ 3u, ecc);
+  assert(!double_fault.corrected && double_fault.uncorrectable);
+  std::cout << "MODEL_RESULT|status=PASS|cases=49|geometries=2|secded=40\n";
 }

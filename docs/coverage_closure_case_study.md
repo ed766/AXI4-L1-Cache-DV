@@ -7,12 +7,12 @@ The canonical closure model is functional coverage (`21 / 21`) plus trace-derive
 | Category | Count | Meaning |
 | --- | ---: | --- |
 | `assertion_declaration_not_executable_rtl` | 12 | Assertion/declaration instrumentation, not executable datapath RTL. |
-| `direct_mapped_structural_variant_only` | 2 | Only reachable in the `CACHE_WAYS=1` structural variant. |
+| `compile_time_inactive_secded_variant` | 60 | Reviewed coverage hole category. |
 | `executable_and_worth_testing` | 29 | Reachable-looking RTL that could justify future targeted tests. |
 | `memory_array_bit_toggle` | 453 | Storage-array toggle points excluded from reviewed toggle closure. |
-| `reviewed_no_action` | 681 | Reviewed non-gating evidence. |
-| `storage_array_toggle_not_closure_target` | 784 | Raw toggle points retained but not chased as closure targets. |
-| `unreachable_defensive_default` | 3 | Defensive/default paths not reachable in legal baseline operation. |
+| `reviewed_no_action` | 652 | Reviewed non-gating evidence. |
+| `storage_array_toggle_not_closure_target` | 783 | Raw toggle points retained but not chased as closure targets. |
+| `unreachable_defensive_default` | 1 | Defensive/default paths not reachable in legal baseline operation. |
 
 
 ## Specific Review Notes

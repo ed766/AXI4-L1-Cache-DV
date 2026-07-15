@@ -48,6 +48,7 @@ module dcache_protocol_assertions #(
   input logic lookup_victim_way,
   input logic lookup_victim_valid,
   input logic lookup_victim_dirty,
+  input logic lookup_victim_uncorrectable,
   input logic lookup_way0_valid,
   input logic lookup_way1_valid,
   input logic active_victim_valid,
@@ -57,7 +58,11 @@ module dcache_protocol_assertions #(
   input logic [1:0] wb_beat,
   input logic [1:0] refill_beat,
   input logic maint_valid,
-  input logic maint_busy
+  input logic maint_busy,
+  input logic maint_error,
+  input logic ecc_corrected_pulse,
+  input logic ecc_uncorrectable_pulse,
+  input logic ecc_scrub_write
 );
   import dcache_pkg::ST_LOOKUP;
   import dcache_pkg::ST_WB_AW;
@@ -102,7 +107,8 @@ module dcache_protocol_assertions #(
         refill_snapshot_dirty <= active_victim_dirty;
         refill_snapshot_tag <= active_victim_tag;
       end
-      if (state == ST_LOOKUP && !hit && lookup_victim_valid && lookup_victim_dirty)
+      if (state == ST_LOOKUP && !hit && lookup_victim_valid && lookup_victim_dirty &&
+          !lookup_victim_uncorrectable)
         dirty_writeback_pending <= 1;
       if (state == ST_WB_B && m_axi_bvalid && m_axi_bready)
         dirty_writeback_pending <= 0;
@@ -137,7 +143,8 @@ module dcache_protocol_assertions #(
     state == ST_WB_B && m_axi_bvalid && m_axi_bready && m_axi_bresp != 0
       |=> active_victim_dirty);
   a_dirty_victim_writeback_before_refill: assert property (@(posedge clk) disable iff (!rst_n)
-    state == ST_LOOKUP && !hit && lookup_victim_valid && lookup_victim_dirty
+    state == ST_LOOKUP && !hit && lookup_victim_valid && lookup_victim_dirty &&
+      !lookup_victim_uncorrectable
       |=> state == ST_WB_AW);
   a_wlast_exactly_final_beat: assert property (@(posedge clk) disable iff (!rst_n)
     m_axi_wvalid |-> (m_axi_wlast == (wb_beat == 2'd3)));
@@ -156,6 +163,10 @@ module dcache_protocol_assertions #(
                    cpu_req_wstrb, cpu_req_size, cpu_req_id}));
   a_no_response_on_reset_release: assert property (@(posedge clk)
     $rose(rst_n) |-> !cpu_rsp_valid);
+  a_secded_scrub_requires_correction: assert property (@(posedge clk) disable iff (!rst_n)
+    ecc_scrub_write |-> ecc_corrected_pulse);
+  a_secded_uncorrectable_reports_error: assert property (@(posedge clk) disable iff (!rst_n)
+    ecc_uncorrectable_pulse |=> cpu_rsp_error || maint_error || maint_busy);
 endmodule
 
 bind l1_dcache_top dcache_protocol_assertions #(.TAG_BITS(TAG_BITS), .WAYS(WAYS))

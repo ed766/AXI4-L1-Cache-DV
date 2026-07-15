@@ -3,6 +3,55 @@
 #include <algorithm>
 #include <stdexcept>
 
+uint8_t CacheReference::secded_encode(uint32_t data) {
+  uint8_t hamming = 0;
+  for (unsigned parity = 0; parity < 6; ++parity) {
+    unsigned data_index = 0;
+    for (unsigned position = 1; position <= 38; ++position) {
+      if ((position & (position - 1)) != 0) {
+        if (position & (1u << parity))
+          hamming ^= static_cast<uint8_t>(((data >> data_index) & 1u) << parity);
+        ++data_index;
+      }
+    }
+  }
+  const bool overall = (__builtin_parity(data) ^ __builtin_parity(hamming)) != 0;
+  return static_cast<uint8_t>(hamming | (static_cast<uint8_t>(overall) << 6));
+}
+
+CacheReference::EccResult CacheReference::secded_decode(uint32_t data, uint8_t code) {
+  uint8_t syndrome = 0;
+  for (unsigned parity = 0; parity < 6; ++parity) {
+    bool parity_value = ((code >> parity) & 1u) != 0;
+    unsigned data_index = 0;
+    for (unsigned position = 1; position <= 38; ++position) {
+      if ((position & (position - 1)) != 0) {
+        if (position & (1u << parity)) parity_value ^= ((data >> data_index) & 1u) != 0;
+        ++data_index;
+      }
+    }
+    if (parity_value) syndrome |= static_cast<uint8_t>(1u << parity);
+  }
+  const bool overall_bad = (__builtin_parity(data) ^ __builtin_parity(code & 0x3f) ^
+                            ((code >> 6) & 1u)) != 0;
+  EccResult result{data, false, false};
+  if (syndrome != 0 && overall_bad) {
+    unsigned data_index = 0;
+    for (unsigned position = 1; position <= 38; ++position) {
+      if ((position & (position - 1)) != 0) {
+        if (position == syndrome) result.data ^= 1u << data_index;
+        ++data_index;
+      }
+    }
+    result.corrected = true;
+  } else if (syndrome == 0 && overall_bad) {
+    result.corrected = true;
+  } else if (syndrome != 0) {
+    result.uncorrectable = true;
+  }
+  return result;
+}
+
 CacheReference::CacheReference(unsigned sets, unsigned ways)
     : sets_(sets), ways_(ways), index_bits_(0),
       lines_(sets, std::vector<Line>(ways)), lru_(sets, 0) {

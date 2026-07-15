@@ -2,7 +2,8 @@
 
 module tb_l1_dcache #(
   parameter int CACHE_SETS = 64,
-  parameter int CACHE_WAYS = 2
+  parameter int CACHE_WAYS = 2,
+  parameter bit CACHE_SECDED_ENABLE = 1'b0
 );
   logic clk = 0;
   logic rst_n = 0;
@@ -37,7 +38,12 @@ module tb_l1_dcache #(
   logic mon_hit, mon_miss, mon_evict;
   logic [1:0] mon_refill_beat, mon_writeback_beat;
 
-  l1_dcache_top #(.SETS(CACHE_SETS), .WAYS(CACHE_WAYS)) dut (.*);
+  l1_dcache_top #(
+    .SETS(CACHE_SETS),
+    .WAYS(CACHE_WAYS),
+    .PARITY_ENABLE(!CACHE_SECDED_ENABLE),
+    .SECDED_ENABLE(CACHE_SECDED_ENABLE)
+  ) dut (.*);
 
   logic [31:0] memory [0:65535];
   logic memory_touched [0:65535];
@@ -74,6 +80,9 @@ module tb_l1_dcache #(
   integer error_count = 0;
   integer axi_aw_handshakes = 0;
   integer axi_ar_handshakes = 0;
+  integer ecc_corrected_count = 0;
+  integer ecc_uncorrectable_count = 0;
+  integer ecc_scrub_count = 0;
   integer failures = 0;
   integer next_id = 1;
   string test_name;
@@ -105,6 +114,9 @@ module tb_l1_dcache #(
       axi_valid_cycles <= axi_valid_cycles + 1;
     if (m_axi_awvalid && m_axi_awready) axi_aw_handshakes <= axi_aw_handshakes + 1;
     if (m_axi_arvalid && m_axi_arready) axi_ar_handshakes <= axi_ar_handshakes + 1;
+    if (dut.ecc_corrected_pulse) ecc_corrected_count <= ecc_corrected_count + 1;
+    if (dut.ecc_uncorrectable_pulse) ecc_uncorrectable_count <= ecc_uncorrectable_count + 1;
+    if (dut.ecc_scrub_write) ecc_scrub_count <= ecc_scrub_count + 1;
     if ((m_axi_awvalid && !m_axi_awready) || (m_axi_wvalid && !m_axi_wready) ||
         (m_axi_arvalid && !m_axi_arready) || (m_axi_rvalid && !m_axi_rready))
       axi_stall_cycles <= axi_stall_cycles + 1;
@@ -961,6 +973,160 @@ module tb_l1_dcache #(
     end
   endtask
 
+  function automatic int cached_way(input logic [31:0] addr);
+    int set_idx;
+    logic [31:0] expected_tag;
+    set_idx = (addr >> 5) & (CACHE_SETS - 1);
+    expected_tag = addr >> (5 + $clog2(CACHE_SETS));
+    cached_way = -1;
+    for (int way = 0; way < CACHE_WAYS; way++) begin
+      if (dut.valid_bits[way][set_idx] && 32'(dut.tags[way][set_idx]) == expected_tag)
+        cached_way = way;
+    end
+  endfunction
+
+  task automatic inject_data_fault(
+    input logic [31:0] addr,
+    input int word,
+    input int bit_a,
+    input int bit_b
+  );
+    int way;
+    int set_idx;
+    way = cached_way(addr);
+    set_idx = (addr >> 5) & (CACHE_SETS - 1);
+    if (way < 0) begin
+      $error("SECDED injection address is not cached: %08x", addr);
+      failures++;
+    end else begin
+      dut.data_mem[way][set_idx][word][bit_a] = ~dut.data_mem[way][set_idx][word][bit_a];
+      if (bit_b >= 0)
+        dut.data_mem[way][set_idx][word][bit_b] = ~dut.data_mem[way][set_idx][word][bit_b];
+    end
+  endtask
+
+  task automatic inject_ecc_fault(input logic [31:0] addr, input int word, input int bit_idx);
+    int way;
+    int set_idx;
+    way = cached_way(addr);
+    set_idx = (addr >> 5) & (CACHE_SETS - 1);
+    if (way < 0) begin
+      $error("SECDED ECC injection address is not cached: %08x", addr);
+      failures++;
+    end else begin
+      dut.ecc_mem[way][set_idx][word][bit_idx] = ~dut.ecc_mem[way][set_idx][word][bit_idx];
+    end
+  endtask
+
+  task automatic run_secded_ras_matrix;
+    logic [31:0] ignored;
+    logic [31:0] actual;
+    logic [31:0] addr0;
+    logic [31:0] addr1;
+    logic [31:0] addr2;
+    logic [31:0] expected;
+    bit error;
+    int stride;
+    int corrected_before;
+    int uncorrectable_before;
+    int scrub_before;
+    int aw_before;
+    int ar_before;
+
+    if (!CACHE_SECDED_ENABLE) begin
+      $error("secded_ras_matrix requires CACHE_SECDED_ENABLE=1");
+      failures++;
+      return;
+    end
+    stride = CACHE_SETS * 32;
+    addr0 = 32'h0000_4000;
+    addr1 = addr0 + stride;
+    addr2 = addr0 + 2*stride;
+
+    expected = memory[addr0 >> 2];
+    expect_read(addr0, expected);
+    corrected_before = ecc_corrected_count;
+    scrub_before = ecc_scrub_count;
+    inject_data_fault(addr0, 0, 5, -1);
+    expect_read(addr0, expected);
+    @(posedge clk);
+    if (ecc_corrected_count <= corrected_before || ecc_scrub_count <= scrub_before) begin
+      $error("Single data-bit SECDED fault was not corrected and scrubbed");
+      failures++;
+    end
+    $display("RAS_COVER|point=single_data_corrected_clean|status=COVERED");
+
+    corrected_before = ecc_corrected_count;
+    inject_ecc_fault(addr0, 0, 0);
+    expect_read(addr0, expected);
+    @(posedge clk);
+    if (ecc_corrected_count <= corrected_before) begin
+      $error("Single ECC-bit fault was not corrected");
+      failures++;
+    end
+    $display("RAS_COVER|point=single_ecc_corrected|status=COVERED");
+
+    uncorrectable_before = ecc_uncorrectable_count;
+    inject_data_fault(addr0, 0, 1, 7);
+    cpu_access(0, addr0, 0, 0, 2, actual, error);
+    @(posedge clk);
+    if (!error || ecc_uncorrectable_count <= uncorrectable_before) begin
+      $error("Double-bit clean-line fault was not contained");
+      failures++;
+    end
+    $display("RAS_COVER|point=double_data_detected_clean|status=COVERED");
+
+    reset_between_operations();
+    cpu_access(1, addr0, 32'hcafe_600d, 4'hf, 2, ignored, error);
+    expect_read(addr1, memory[addr1 >> 2]);
+    inject_data_fault(addr0, 0, 9, -1);
+    expect_read(addr2, memory[addr2 >> 2]);
+    if (memory[addr0 >> 2] !== 32'hcafe_600d) begin
+      $error("Corrected dirty victim was not written back with repaired data");
+      failures++;
+    end
+    $display("RAS_COVER|point=single_data_corrected_dirty_writeback|status=COVERED");
+
+    reset_between_operations();
+    cpu_access(1, addr0, 32'hdead_700d, 4'hf, 2, ignored, error);
+    expect_read(addr1, memory[addr1 >> 2]);
+    inject_data_fault(addr0, 0, 2, 3);
+    aw_before = axi_aw_handshakes;
+    ar_before = axi_ar_handshakes;
+    cpu_access(0, addr2, 0, 0, 2, actual, error);
+    if (!error || axi_aw_handshakes != aw_before || axi_ar_handshakes != ar_before) begin
+      $error("Uncorrectable dirty victim escaped containment");
+      failures++;
+    end
+    $display("RAS_COVER|point=double_data_blocks_dirty_eviction|status=COVERED");
+
+    reset_between_operations();
+    cpu_access(1, addr0, 32'h1234_abcd, 4'hf, 2, ignored, error);
+    inject_data_fault(addr0, 0, 11, -1);
+    issue_maintenance(2'd0);
+    if (memory[addr0 >> 2] !== 32'h1234_abcd) begin
+      $error("Maintenance did not write corrected dirty data");
+      failures++;
+    end
+    $display("RAS_COVER|point=single_data_corrected_maintenance|status=COVERED");
+
+    reset_between_operations();
+    cpu_access(1, addr0, 32'h7654_3210, 4'hf, 2, ignored, error);
+    inject_data_fault(addr0, 0, 12, 13);
+    @(negedge clk); maint_valid = 1; maint_cmd = 2'd0;
+    do @(posedge clk); while (!maint_ready);
+    @(negedge clk); maint_valid = 0;
+    do @(posedge clk); while (!maint_done);
+    if (!maint_error || memory[addr0 >> 2] === 32'h7654_3210) begin
+      $error("Maintenance did not preserve an uncorrectable dirty line");
+      failures++;
+    end
+    $display("RAS_COVER|point=double_data_detected_maintenance|status=COVERED");
+    $display("RAS_RESULT|corrected=%0d|uncorrectable=%0d|scrubs=%0d|status=%s",
+             ecc_corrected_count, ecc_uncorrectable_count, ecc_scrub_count,
+             failures == 0 ? "PASS" : "FAIL");
+  endtask
+
   task automatic reset_between_operations;
     @(negedge clk); rst_n = 0;
     repeat (3) @(posedge clk);
@@ -1200,6 +1366,7 @@ module tb_l1_dcache #(
       "invalid_way_preference_matrix": run_invalid_way_preference_matrix();
       "maintenance_dirty_error_boundary": run_maintenance_dirty_error_boundary();
       "maintenance_backpressure_boundary": run_maintenance_backpressure_boundary();
+      "secded_ras_matrix": run_secded_ras_matrix();
       "cross_matrix": run_cross_matrix();
       "performance_workload": run_performance_workload();
       "random": run_random();

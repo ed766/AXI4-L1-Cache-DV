@@ -7,6 +7,12 @@
 
 class CacheReference {
  public:
+  struct EccResult {
+    uint32_t data = 0;
+    bool corrected = false;
+    bool uncorrectable = false;
+  };
+
   struct Response {
     uint32_t data = 0;
     bool error = false;
@@ -29,6 +35,8 @@ class CacheReference {
                   uint8_t strobes, uint8_t size);
   bool flush(bool invalidate);
   bool maintenance(uint8_t command);
+  static uint8_t secded_encode(uint32_t data);
+  static EccResult secded_decode(uint32_t data, uint8_t code);
 
  private:
   static constexpr unsigned kWordsPerLine = 8;

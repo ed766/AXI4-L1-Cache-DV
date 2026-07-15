@@ -4,28 +4,28 @@ Both variants are 4 KiB write-back, write-allocate caches with 32-byte lines. Re
 
 | Workload | Geometry | Hit rate | Clean evictions | Dirty evictions | p95 latency | Throughput | Yosys cells |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `sequential` | `direct_mapped` | 85.89% | 0 | 1 | 16 | 0.11088 | 46642 |
-| `uniform` | `direct_mapped` | 3.07% | 32 | 37 | 23 | 0.04483 | 46642 |
-| `hot_set` | `direct_mapped` | 78.53% | 0 | 1 | 15 | 0.09583 | 46642 |
-| `same_set` | `direct_mapped` | 0.00% | 82 | 78 | 23 | 0.04405 | 46642 |
-| `read_heavy` | `direct_mapped` | 4.29% | 53 | 19 | 23 | 0.04837 | 46642 |
-| `write_heavy` | `direct_mapped` | 1.84% | 16 | 67 | 23 | 0.04066 | 46642 |
-| `mixed_strobes` | `direct_mapped` | 4.29% | 32 | 44 | 23 | 0.04414 | 46642 |
-| `sequential` | `two_way` | 85.89% | 1 | 0 | 16 | 0.11088 | 47625 |
-| `uniform` | `two_way` | 3.07% | 31 | 29 | 23 | 0.04474 | 47625 |
-| `hot_set` | `two_way` | 78.53% | 1 | 0 | 15 | 0.09583 | 47625 |
-| `same_set` | `two_way` | 96.93% | 1 | 1 | 2 | 0.14658 | 47625 |
-| `read_heavy` | `two_way` | 4.29% | 43 | 18 | 23 | 0.04820 | 47625 |
-| `write_heavy` | `two_way` | 1.84% | 18 | 55 | 23 | 0.04029 | 47625 |
-| `mixed_strobes` | `two_way` | 4.29% | 29 | 37 | 23 | 0.04391 | 47625 |
+| `sequential` | `direct_mapped` | 85.89% | 0 | 1 | 16 | 0.11088 | NA |
+| `uniform` | `direct_mapped` | 3.07% | 32 | 37 | 23 | 0.04483 | NA |
+| `hot_set` | `direct_mapped` | 78.53% | 0 | 1 | 15 | 0.09583 | NA |
+| `same_set` | `direct_mapped` | 0.00% | 82 | 78 | 23 | 0.04405 | NA |
+| `read_heavy` | `direct_mapped` | 4.29% | 53 | 19 | 23 | 0.04837 | NA |
+| `write_heavy` | `direct_mapped` | 1.84% | 16 | 67 | 23 | 0.04066 | NA |
+| `mixed_strobes` | `direct_mapped` | 4.29% | 32 | 44 | 23 | 0.04414 | NA |
+| `sequential` | `two_way` | 85.89% | 1 | 0 | 16 | 0.11088 | NA |
+| `uniform` | `two_way` | 3.07% | 31 | 29 | 23 | 0.04474 | NA |
+| `hot_set` | `two_way` | 78.53% | 1 | 0 | 15 | 0.09583 | NA |
+| `same_set` | `two_way` | 96.93% | 1 | 1 | 2 | 0.14658 | NA |
+| `read_heavy` | `two_way` | 4.29% | 43 | 18 | 23 | 0.04820 | NA |
+| `write_heavy` | `two_way` | 1.84% | 18 | 55 | 23 | 0.04029 | NA |
+| `mixed_strobes` | `two_way` | 4.29% | 29 | 37 | 23 | 0.04391 | NA |
 
 
 ## Implementation Proxy
 
 | Geometry | Yosys status | Cell-count proxy | Area proxy | Timing proxy |
 | --- | --- | ---: | ---: | ---: |
-| `direct_mapped` | PASS | 46642 | 46642 | NA |
-| `two_way` | PASS | 47625 | 47625 | NA |
+| `direct_mapped` | FAIL | NA | NA | NA |
+| `two_way` | FAIL | NA | NA | NA |
 
 
 ## Interpretation

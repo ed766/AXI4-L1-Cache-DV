@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform docs-check model-test model-trace-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
+.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform docs-check model-test model-trace-check ras-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
 
 lint:
 	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
@@ -64,6 +64,9 @@ model-test:
 	$(CXX) -std=c++17 -Wall -Wextra -Werror -O2 model/cache_reference.cpp model/cache_reference_test.cpp -o build/model/cache_reference_test
 	./build/model/cache_reference_test
 
+ras-check: model-test
+	$(PYTHON) scripts/run_ras.py
+
 formal:
 	@if command -v sby >/dev/null 2>&1; then sby -f formal/cache_safety.sby; \
 	else echo "SKIP: SymbiYosys (sby) is not installed"; fi
@@ -104,7 +107,7 @@ uvm-runtime-smoke: uvm-check-env
 project-check: lint model-test regress model-trace-check functional-coverage performance stress-manifest
 	$(PYTHON) scripts/gen_metrics.py
 
-release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage associativity-check associativity-characterize
+release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage associativity-check associativity-characterize ras-check
 	$(PYTHON) scripts/run_model_trace.py --traces '*.csv'
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/check_docs.py

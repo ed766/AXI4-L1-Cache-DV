@@ -1,6 +1,6 @@
 # AXI4 L1 Data Cache DV Project
 
-A standalone RTL and design-verification project for a blocking, 4 KiB L1 data cache. The baseline is 2-way set-associative; an equal-capacity direct-mapped structural variant supports measured associativity tradeoff studies. The cache uses a 32-bit CPU request interface and a 64-bit AXI4 master interface with four-beat line refill and writeback bursts.
+A standalone RTL and design-verification project focused on cache microarchitecture, independent C++ prediction, replacement/error containment, and architecture tradeoffs. The blocking 4 KiB baseline is 2-way set-associative; equal-capacity direct-mapped and optional SECDED variants provide measured associativity and RAS evidence.
 
 This repository is independent of the earlier chiplet project. It reuses workflow ideas, but contains new cache RTL, tests, assertions, reference modeling, and reports.
 
@@ -12,7 +12,7 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Functional coverage points | `21 / 21` observed |
 | Compile-time bug mutations | `4 / 4` detected |
 | Manifest-driven stress executions | `100 / 100` passing |
-| C++ trace-replay checks | `22 / 22` directed traces passing |
+| C++ trace-replay checks | `127 / 127` directed, performance, cross, and stress traces passing |
 | Cache interaction cross coverage | `55 / 55` bins observed |
 | Named protocol/architecture assertions | `18` |
 | Waveform-backed debug cases | `1 / 1` reproduced |
@@ -25,8 +25,8 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 | Equal-capacity associativity checks | `20 / 20` passing |
 | Associativity study points | `14` model-checked points |
 | Solver-backed formal tasks | `5 / 5` meeting expectation |
-| UVM runtime smoke collateral | `0 / 3` runtime passing; `3 / 3` compile/equivalent scenarios documented as `SKIP` |
-| Yosys synthesis proxy | target added; local report is `SKIP` when Yosys is unavailable |
+| Yosys synthesis proxy | `2 / 2` equal-capacity variants synthesized |
+| Optional SECDED RAS matrix | `1 / 1` passing; `7 / 7` required RAS points |
 
 The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
 
@@ -71,6 +71,7 @@ make smoke          # fast cold-miss/hit/store path
 make project-check  # lint, C++ model, regression, coverage/report generation
 make release-check  # stress, trace replay, crosses, performance, mutations, code coverage
 make model-trace-check
+make ras-check       # optional SECDED correction/containment matrix
 make cache-cross-coverage
 make coverage-edges # optional byte-strobe, reset/error, LRU, maintenance, and direct-mapped coverage evidence
 make performance-sweep
@@ -97,7 +98,7 @@ For a focused design-verification review:
 5. Follow the [hiring-manager case study](docs/hiring_manager_case_study.md) and [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
 6. Inspect [functional and code coverage](docs/coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
 7. Review the [AXI4 subset compliance appendix](docs/axi_subset_compliance.md), [equal-capacity associativity study](docs/associativity_characterization.md), and [synthesis characterization](docs/synthesis_characterization.md).
-8. Check [coverage closure case study](docs/coverage_closure_case_study.md), [UVM status](docs/uvm_status.md), and [formal evidence](docs/formal.md) for explicit tool and execution boundaries.
+8. Check [SECDED/RAS evidence](docs/ras.md), [coverage closure case study](docs/coverage_closure_case_study.md), and [formal evidence](docs/formal.md). The [UVM status](docs/uvm_status.md) is retained only as secondary methodology collateral.
 
 ## Verification Bar
 
@@ -110,6 +111,7 @@ For a focused design-verification review:
 | Coverage edges | Optional byte-strobe, reset beat matrix, AXI error matrix, LRU/replacement, maintenance-boundary, and direct-mapped structural coverage lane |
 | Debug and automation | Four mutation detections, FST/SVG case study, GitHub Actions, and `make release-check` |
 | Architecture tradeoff | 20 directed geometry checks, 14 model-checked direct-mapped/2-way characterization points, and Yosys proxy synthesis when available |
+| Reliability variant | Optional data SECDED with correction, read scrub, double-error containment, C++ known-answer checks, assertions, and a 7-point RAS matrix |
 | Formal | Depth-stated safety/error checks, reachable covers, and expected mutation failures |
 | AXI subset | Cache-master subset contract mapped to assertions, tests, and reports |
 

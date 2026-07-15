@@ -15,7 +15,7 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Functional coverage | 21 / 21 |
 | Implemented bug mutations detected | 4 / 4 |
 | Optional seeded stress scenarios | 100 / 100 |
-| C++ trace-replay checks | 22 / 22 |
+| C++ trace-replay checks | 127 / 127 |
 | Cache interaction cross coverage | 55 / 55 |
 | Waveform-backed debug cases | 1 / 1 |
 | Solver-backed formal tasks meeting expectation | 5 / 5 |
@@ -24,17 +24,20 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Associativity characterization points | 14 |
 | Synthesis proxy variants | 2 / 2 |
 | UVM runtime smoke collateral | 0 PASS / 3 SKIP / 3 total |
-| Named protocol/architecture assertions | 18 |
+| Optional SECDED RAS matrix | 1 / 1 |
+| SECDED RAS coverage | 7 / 7 |
+| Named protocol/architecture assertions | 20 |
 | Optional coverage-edge scenarios | 19 / 19 |
-| Design RTL line coverage proxy | 88.10% |
+| Design RTL line coverage proxy | 74.24% |
 | Design RTL reviewed line coverage proxy | 100.00% |
-| Design RTL branch coverage proxy | 95.00% |
-| Design RTL raw toggle coverage proxy | 59.49% |
+| Design RTL branch coverage proxy | 87.50% |
+| Design RTL raw toggle coverage proxy | 61.19% |
 | Independent C++ model self-test | PASS |
 
 ## Evidence Boundaries
 
 - Results are report-backed local verification closure, not commercial signoff.
 - UVM is secondary methodology collateral; runtime reporting is limited and separated from closure.
+- SECDED is a separately verified structural variant; the parity baseline remains the canonical cache configuration.
 - Formal results are depth-stated bounded safety/error checks plus reachability covers and expected mutation failures, not exhaustive proof of cache correctness.
 - AXI4 behavior is a constrained cache-master subset, not an AXI compliance certification.
