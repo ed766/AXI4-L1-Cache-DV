@@ -38,7 +38,7 @@ flowchart LR
     MON["SV observer + trace replay\nSVA + C++ reference model"] -.-> CACHE
 ```
 
-![Cache verification architecture](docs/images/cache_dv_architecture.svg)
+![Cache verification architecture](docs/images/cache_dv_architecture.png)
 
 ## Cache Policy
 
