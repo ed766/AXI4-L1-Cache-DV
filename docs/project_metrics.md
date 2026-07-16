@@ -28,8 +28,8 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | SECDED RAS coverage | 7 / 7 |
 | Named protocol/architecture assertions | 20 |
 | Optional coverage-edge scenarios | 19 / 19 |
-| Design RTL line coverage proxy | 74.24% |
-| Design RTL reviewed line coverage proxy | 100.00% |
+| Design RTL raw line coverage proxy | 49 / 66 (74.24%) |
+| Design RTL reviewed line coverage proxy | 27 / 27 (100.00%); 39 excluded |
 | Design RTL branch coverage proxy | 87.50% |
 | Design RTL raw toggle coverage proxy | 61.19% |
 | Independent C++ model self-test | PASS |

@@ -8,6 +8,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build" / "ras"
+VERILATOR_BUILD = ROOT / "build" / "verilator"
 REPORTS = ROOT / "reports"
 DOC = ROOT / "docs" / "ras.md"
 
@@ -22,11 +23,24 @@ def main() -> int:
         ROOT / "sim" / "monitors" / "dcache_trace_observer.sv",
         ROOT / "sim" / "tb_l1_dcache.sv",
     ]
+    coverage_main = BUILD / "coverage_main.cpp"
+    coverage_main.write_text(
+        '#include "Vtb_l1_dcache.h"\n'
+        '#include "verilated.h"\n'
+        '#include "verilated_cov.h"\n'
+        'int main(int argc, char** argv) {\n'
+        '  VerilatedContext context; context.commandArgs(argc, argv);\n'
+        '  Vtb_l1_dcache model{&context};\n'
+        '  while (!context.gotFinish()) { model.eval(); '
+        'if (model.eventsPending()) context.time(model.nextTimeSlot()); else context.timeInc(1); }\n'
+        '  model.final(); VerilatedCov::write("coverage.dat"); return 0;\n'
+        '}\n'
+    )
     command = [
-        "verilator", "-j", "0", "--binary", "--sv", "--timing", "--assert", "-Wall",
+        "verilator", "-j", "0", "--coverage", "--cc", "--exe", "--build", "--sv", "--timing", "--assert", "-Wall",
         "-Wno-UNUSEDSIGNAL", "-Wno-BLKSEQ", "-Wno-SYNCASYNCNET",
         "--top-module", "tb_l1_dcache", "--Mdir", str(BUILD),
-        "-GCACHE_SECDED_ENABLE=1'h1", *map(str, sources),
+        "-GCACHE_SECDED_ENABLE=1'h1", *map(str, sources), str(coverage_main),
     ]
     compile_result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
     (REPORTS / "ras_compile.log").write_text(compile_result.stdout + compile_result.stderr)
@@ -34,11 +48,18 @@ def main() -> int:
         print(compile_result.stdout + compile_result.stderr)
         return compile_result.returncode
 
+    coverage_path = ROOT / "coverage.dat"
+    if coverage_path.exists():
+        coverage_path.unlink()
     run_result = subprocess.run(
         [str(BUILD / "Vtb_l1_dcache"), "+TEST=secded_ras_matrix"],
         cwd=ROOT, text=True, capture_output=True,
     )
     output = run_result.stdout + run_result.stderr
+    coverage_dir = VERILATOR_BUILD / "coverage_secded"
+    coverage_dir.mkdir(parents=True, exist_ok=True)
+    if coverage_path.exists():
+        coverage_path.replace(coverage_dir / "secded_ras_matrix.dat")
     (REPORTS / "ras_matrix.log").write_text(output)
     cover_rows = [
         dict(item.split("=", 1) for item in match.split("|") if "=" in item)

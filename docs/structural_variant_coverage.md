@@ -1,8 +1,8 @@
-# Verilator Code Coverage
+# Structural-Variant Code Coverage
 
-Coverage is grouped so optional edge and structural-variant tests do not obscure the baseline 2-way cache result.
+The parity 2-way baseline remains the canonical code-coverage scope. Direct-mapped and SECDED runs execute compile-time alternatives; the combined row is a union of real executions and is reported only as supporting structural evidence.
 
-| Group | Point type | Raw hit/total | Raw | Excluded | Reviewed hit/total | Reviewed |
+| Group | Point | Raw hit/total | Raw | Excluded | Reviewed hit/total | Reviewed |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `baseline_2way` | branch | 63 / 72 | 87.50% | 16 | 53 / 56 | 94.64% |
 | `baseline_2way` | line | 49 / 66 | 74.24% | 39 | 27 / 27 | 100.00% |
@@ -20,12 +20,4 @@ Coverage is grouped so optional edge and structural-variant tests do not obscure
 | `combined_structural_variants` | line | 59 / 67 | 88.06% | 19 | 45 / 48 | 93.75% |
 | `combined_structural_variants` | toggle | 848 / 1437 | 59.01% | 256 | 714 / 1181 | 60.46% |
 
-## Coverage Groups
-
-- `baseline_2way`: default 4 KiB, 2-way cache closure run.
-- `coverage_edges_2way`: optional directed edge tests for byte strobes, set/way toggling, and maintenance boundaries.
-- `direct_mapped_variant`: optional 4 KiB direct-mapped structural variant compiled with `CACHE_WAYS=1`, `CACHE_SETS=128`.
-- `secded_2way_variant`: optional 2-way SECDED/RAS structural variant.
-- `combined_structural_variants`: union across every executed geometry/integrity variant; never substituted for baseline closure.
-
-Reviewed exclusions are limited to defensive defaults, assertion declaration lines, compile-time inactive logic, and storage-array toggle points. Raw values and exclusion denominators remain visible. Direct-mapped, SECDED, and combined coverage are structural-variant evidence and are never substituted for the baseline 2-way closure claim. This is Verilator proxy evidence, not commercial coverage signoff.
+Raw baseline coverage is the headline metric. Reviewed values always retain their denominator and exclusion count; storage-array toggles are not treated as a closure objective.

@@ -1066,6 +1066,26 @@ module tb_l1_dcache #(
     end
     $display("RAS_COVER|point=single_ecc_corrected|status=COVERED");
 
+    // Exercise the SECDED overall-parity correction branch independently.
+    corrected_before = ecc_corrected_count;
+    inject_ecc_fault(addr0, 0, 6);
+    expect_read(addr0, expected);
+    @(posedge clk);
+    if (ecc_corrected_count <= corrected_before) begin
+      $error("Single overall-parity SECDED fault was not corrected");
+      failures++;
+    end
+
+    // A write hit on corrected data must commit the merged word with fresh ECC.
+    inject_data_fault(addr0, 0, 4, -1);
+    cpu_access(1, addr0, 32'h55aa_33cc, 4'hf, 2, ignored, error);
+    if (error) begin
+      $error("Correctable write-hit fault produced an error response");
+      failures++;
+    end
+    expect_read(addr0, 32'h55aa_33cc);
+    expected = 32'h55aa_33cc;
+
     uncorrectable_before = ecc_uncorrectable_count;
     inject_data_fault(addr0, 0, 1, 7);
     cpu_access(0, addr0, 0, 0, 2, actual, error);

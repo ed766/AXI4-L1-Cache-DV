@@ -6,27 +6,22 @@ This repository is independent of the earlier chiplet project. It reuses workflo
 
 ## Verification Snapshot
 
+This table is generated from canonical CSV reports by `make readme-metrics`.
+
+<!-- BEGIN GENERATED METRICS -->
 | Evidence | Current result |
 | --- | ---: |
-| Directed/random Verilator scenarios | `22 / 22` passing |
-| Functional coverage points | `21 / 21` observed |
-| Compile-time bug mutations | `4 / 4` detected |
-| Manifest-driven stress executions | `100 / 100` passing |
-| C++ trace-replay checks | `127 / 127` directed, performance, cross, and stress traces passing |
-| Cache interaction cross coverage | `55 / 55` bins observed |
-| Named protocol/architecture assertions | `18` |
-| Waveform-backed debug cases | `1 / 1` reproduced |
-| Raw design line coverage | `88.10%` |
-| Reviewed design line coverage | `100.00%` |
-| Design branch coverage | `95.00%` |
-| Raw design toggle coverage | `59.49%` |
-| Optional coverage-edge scenarios | `19 / 19` passing |
-| Independent C++ model self-test | `PASS` |
-| Equal-capacity associativity checks | `20 / 20` passing |
-| Associativity study points | `14` model-checked points |
-| Solver-backed formal tasks | `5 / 5` meeting expectation |
-| Yosys geometry proxy | `2 / 2` equal-capacity storage/control proxies synthesized |
-| Optional SECDED RAS matrix | `1 / 1` passing; `7 / 7` required RAS points |
+| Directed scenarios | `22 / 22` |
+| Seeded stress | `100 / 100` |
+| C++ trace replay | `127 / 127` |
+| Functional coverage | `21 / 21` |
+| Interaction coverage | `55 / 55` |
+| Mutation detection | `4 / 4` |
+| SECDED RAS coverage | `7 / 7` |
+| Raw baseline line coverage | `49 / 66 (74.24%)` |
+| Reviewed baseline line coverage | `27 / 27 (100.00%); 39 excluded` |
+| Raw branch / toggle coverage | `87.50% / 61.19%` |
+<!-- END GENERATED METRICS -->
 
 The executable suite covers cold refill, warm hits, clean and dirty replacement, independent AXI channel waits, read/write error propagation, byte strobes, maintenance, reset recovery, and seeded-random data checking. Generated metrics are in [docs/project_metrics.md](docs/project_metrics.md). Claims remain separate from targets that have not closed.
 
@@ -82,10 +77,9 @@ make bug-validate   # expected-failure mutation checks
 make debug-waveform # FST plus deterministic assertion-debug SVG
 make formal-prove   # bounded safety, reachability, and mutation checks
 make formal-small-prove # reduced-geometry bounded proof/cover lane when sby is installed
-make uvm-runtime-smoke # compile + honest runtime SKIP/TIMEOUT reporting
 ```
 
-The default flow uses the system Verilator and the C++ trace checker. Optional UVM source remains secondary methodology collateral; compilation requires external `VERILATOR_UVM` and `UVM_HOME`. If UVM phase runtime times out, `uvm-runtime-smoke` reports `SKIP` rather than counting equivalent non-UVM scenarios as UVM passes.
+The default flow uses the system Verilator and the C++ trace checker. Optional UVM source is retained only as secondary methodology collateral in [the UVM status page](docs/uvm_status.md); it is not part of the reviewer quick path or closure claim.
 
 ## Reviewer Path
 
@@ -95,10 +89,10 @@ For a focused design-verification review:
 2. Use the [verification traceability matrix](docs/traceability.md) to map requirements to stimulus, checkers, assertions, and coverage.
 3. Read the [cache architecture](docs/architecture.md) for hit, eviction, refill, writeback, and maintenance behavior.
 4. Review the [bug diary](docs/bug_diary.md) for four implemented mutation/debug cases.
-5. Follow the [hiring-manager case study](docs/hiring_manager_case_study.md) and [early-WLAST waveform case study](docs/debug_case_study.md) for assertion-driven failure triage.
-6. Inspect [functional and code coverage](docs/coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
+5. Follow the [hiring-manager case study](docs/hiring_manager_case_study.md) for assertion-driven early-`WLAST` failure triage and waveform evidence.
+6. Inspect [functional and code coverage](docs/coverage.md), [structural-variant coverage](docs/structural_variant_coverage.md), [true cross coverage](docs/cross_coverage.md), and [per-request performance characterization](docs/performance.md).
 7. Review the [AXI4 subset compliance appendix](docs/axi_subset_compliance.md), [equal-capacity associativity study](docs/associativity_characterization.md), and [synthesis characterization](docs/synthesis_characterization.md).
-8. Check [SECDED/RAS evidence](docs/ras.md), [coverage closure case study](docs/coverage_closure_case_study.md), and [formal evidence](docs/formal.md). The [UVM status](docs/uvm_status.md) is retained only as secondary methodology collateral.
+8. Check [SECDED/RAS evidence](docs/ras.md), [coverage closure case study](docs/coverage_closure_case_study.md), and [formal evidence](docs/formal.md).
 
 ## Verification Bar
 
@@ -128,4 +122,4 @@ The [verification plan](docs/verification_plan.md) defines the intended closure 
 
 ## Scope Boundaries
 
-The design intentionally excludes coherence, atomics, MSHRs, non-blocking misses, speculative requests, and production ECC. The AXI4 interface is a constrained cache-master subset, not an AXI compliance implementation. Open-source simulation, coverage, and formal collateral are verification evidence, not commercial protocol, timing, CDC, or silicon signoff.
+The design intentionally excludes coherence, atomics, MSHRs, non-blocking misses, speculative requests, and production-qualified ECC/RAS. The optional SECDED variant is verification collateral rather than a production RAS implementation. The AXI4 interface is a constrained cache-master subset, not an AXI compliance implementation. Open-source simulation, coverage, and formal collateral are verification evidence, not commercial protocol, timing, CDC, or silicon signoff.

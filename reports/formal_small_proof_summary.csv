@@ -1,3 +1,3 @@
 task,kind,status,depth,expected,meets_expectation,runtime_seconds,log
-small_1way_bounded_safety,small_geometry_bounded_safety,PASS,20,PASS,True,11.26,reports/formal_small_1way_bounded_safety.log
-small_2way_bounded_safety,small_geometry_bounded_safety,PASS,20,PASS,True,69.33,reports/formal_small_2way_bounded_safety.log
+small_1way_bounded_safety,small_geometry_bounded_safety,PASS,20,PASS,True,9.39,reports/formal_small_1way_bounded_safety.log
+small_2way_bounded_safety,small_geometry_bounded_safety,PASS,20,PASS,True,57.33,reports/formal_small_2way_bounded_safety.log

@@ -15,6 +15,7 @@ GROUP_DIRS = {
     "baseline_2way": BUILD / "coverage",
     "coverage_edges_2way": BUILD / "coverage_edges",
     "direct_mapped_variant": BUILD / "coverage_direct_mapped",
+    "secded_2way_variant": BUILD / "coverage_secded",
 }
 
 
@@ -83,7 +84,7 @@ def exclusion(group: str, point_type: str, source: str, line: int, object_name: 
     return ""
 
 
-def collect(files: list[pathlib.Path]) -> dict[str, dict[str, int]]:
+def collect(files: list[pathlib.Path], *, structural_union: bool = False) -> dict[str, dict[str, int]]:
     points: dict[str, dict[str, int]] = {}
     for path in files:
         for raw in path.read_text(errors="replace").splitlines():
@@ -99,14 +100,17 @@ def collect(files: list[pathlib.Path]) -> dict[str, dict[str, int]]:
             if "/rtl/" not in normalized_source and not normalized_source.startswith("rtl/"):
                 continue
             kind = point_kind(descriptor)
-            points.setdefault(kind, {})[descriptor] = points.setdefault(kind, {}).get(descriptor, 0) + count
+            key = descriptor
+            if structural_union:
+                key = re.sub(r"(\x01page\x02[^\x01/]+/)[^\x01]+", r"\1structural_union", key)
+            points.setdefault(kind, {})[key] = points.setdefault(kind, {}).get(key, 0) + count
     return points
 
 
-def summarize(group: str, files: list[pathlib.Path]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+def summarize(group: str, files: list[pathlib.Path], *, structural_union: bool = False) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     rows: list[dict[str, str]] = []
     holes: list[dict[str, str]] = []
-    points = collect(files)
+    points = collect(files, structural_union=structural_union)
     for point_type, values in sorted(points.items()):
         raw_total = len(values)
         raw_hit = sum(count > 0 for count in values.values())
@@ -164,9 +168,19 @@ for group, files in available.items():
     summary_rows.extend(rows)
     hole_rows.extend(holes)
 
+if len(available) > 1:
+    rows, holes = summarize("combined_structural_variants", all_files, structural_union=True)
+    summary_rows.extend(rows)
+    hole_rows.extend(holes)
+
 summary_fields = ["coverage_group", "point_type", "raw_hit", "raw_total", "raw_percent",
                   "excluded", "reviewed_hit", "reviewed_total", "reviewed_percent"]
 with (REPORTS / "code_coverage_summary.csv").open("w", newline="") as handle:
+    writer = csv.DictWriter(handle, fieldnames=summary_fields, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_rows)
+
+with (REPORTS / "structural_variant_coverage.csv").open("w", newline="") as handle:
     writer = csv.DictWriter(handle, fieldnames=summary_fields, lineterminator="\n")
     writer.writeheader()
     writer.writerows(summary_rows)
@@ -192,11 +206,29 @@ text += "\n## Coverage Groups\n\n"
 text += "- `baseline_2way`: default 4 KiB, 2-way cache closure run.\n"
 text += "- `coverage_edges_2way`: optional directed edge tests for byte strobes, set/way toggling, and maintenance boundaries.\n"
 text += "- `direct_mapped_variant`: optional 4 KiB direct-mapped structural variant compiled with `CACHE_WAYS=1`, `CACHE_SETS=128`.\n"
+text += "- `secded_2way_variant`: optional 2-way SECDED/RAS structural variant.\n"
+text += "- `combined_structural_variants`: union across every executed geometry/integrity variant; never substituted for baseline closure.\n"
 text += ("\nReviewed exclusions are limited to defensive defaults, assertion declaration lines, "
-         "and storage-array toggle points. Raw values remain visible. Direct-mapped coverage is "
-         "reported as structural-variant evidence, not as part of the baseline 2-way closure claim. "
+         "compile-time inactive logic, and storage-array toggle points. Raw values and exclusion "
+         "denominators remain visible. Direct-mapped, SECDED, and combined coverage are structural-variant "
+         "evidence and are never substituted for the baseline 2-way closure claim. "
          "This is Verilator proxy evidence, not commercial coverage signoff.\n")
 (REPORTS / "code_coverage.md").write_text(text)
+(ROOT / "docs" / "structural_variant_coverage.md").write_text(
+    "# Structural-Variant Code Coverage\n\n"
+    "The parity 2-way baseline remains the canonical code-coverage scope. Direct-mapped and SECDED "
+    "runs execute compile-time alternatives; the combined row is a union of real executions and is "
+    "reported only as supporting structural evidence.\n\n" +
+    "| Group | Point | Raw hit/total | Raw | Excluded | Reviewed hit/total | Reviewed |\n"
+    "| --- | --- | ---: | ---: | ---: | ---: | ---: |\n" +
+    "".join(
+        f"| `{row['coverage_group']}` | {row['point_type']} | {row['raw_hit']} / {row['raw_total']} | "
+        f"{row['raw_percent']}% | {row['excluded']} | {row['reviewed_hit']} / {row['reviewed_total']} | "
+        f"{row['reviewed_percent']}% |\n" for row in summary_rows
+    ) +
+    "\nRaw baseline coverage is the headline metric. Reviewed values always retain their denominator and "
+    "exclusion count; storage-array toggles are not treated as a closure objective.\n"
+)
 
 line_row = next((row for row in summary_rows
                  if row["coverage_group"] == "baseline_2way" and row["point_type"] == "line"), None)

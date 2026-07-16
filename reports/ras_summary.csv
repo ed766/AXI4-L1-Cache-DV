@@ -1,2 +1,2 @@
 test,status,corrected,uncorrectable,scrubs,log
-secded_ras_matrix,PASS,2,3,2,reports/ras_matrix.log
+secded_ras_matrix,PASS,4,3,3,reports/ras_matrix.log

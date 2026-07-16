@@ -8,9 +8,9 @@ The optional `SECDED_ENABLE` cache variant stores a seven-bit SECDED code with e
 | --- | ---: |
 | RAS matrix | `PASS` |
 | Required RAS points | `7 / 7` |
-| Correction events | `2` |
+| Correction events | `4` |
 | Uncorrectable detections | `3` |
-| Read scrubs | `2` |
+| Read scrubs | `3` |
 | Independent C++ SECDED known-answer cases | `40` |
 
 The matrix covers clean-line data correction, ECC-bit correction, clean-line double-error detection, corrected dirty eviction, blocked uncorrectable dirty eviction, corrected maintenance writeback, and uncorrectable maintenance containment. Faults are injected through verification-only hierarchy access; no CPU or AXI port was added.

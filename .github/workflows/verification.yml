@@ -40,9 +40,11 @@ jobs:
             docs/synthesis_characterization.md
             docs/coverage.md
             docs/coverage_closure_case_study.md
+            docs/structural_variant_coverage.md
             docs/cross_coverage.md
             docs/images/*debug.svg
             docs/images/associativity_comparison.svg
+            reports/structural_variant_coverage.csv
 
   synthesis-proxy:
     needs: quick
@@ -98,4 +100,3 @@ jobs:
             reports/formal_proof_summary.csv
             reports/formal_small_proof_summary.csv
             docs/formal.md
-            docs/formal_small.md

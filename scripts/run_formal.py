@@ -14,6 +14,31 @@ REPORTS = ROOT / "reports"
 FORMAL = ROOT / "formal"
 
 
+def write_combined_doc() -> None:
+    rows: list[dict[str, str]] = []
+    for name in ("formal_proof_summary.csv", "formal_small_proof_summary.csv"):
+        path = REPORTS / name
+        if path.exists():
+            rows.extend(csv.DictReader(path.open()))
+    table = "".join(
+        f"| `{row['task']}` | `{row['kind']}` | {row['status']} | {row['expected']} | "
+        f"{'yes' if row['meets_expectation'].lower() in ('true', 'yes', '1') else 'no'} | "
+        f"{row['depth']} | {row['runtime_seconds']} s |\n"
+        for row in rows
+    )
+    (ROOT / "docs" / "formal.md").write_text(f"""# Formal Evidence
+
+The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. Cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked. The canonical and reduced-geometry tasks target the parity baseline; optional SECDED behavior is checked by the independent model-backed RAS matrix.
+
+| Task | Kind | Observed | Expected | Meets expectation | Depth | Runtime |
+| --- | --- | --- | --- | --- | ---: | ---: |
+{table}
+Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Reachability tasks exercise hits, misses, dirty evictions, error responses, and maintenance completion; mutation tasks demonstrate checker sensitivity.
+
+The `small_1way` and `small_2way` rows are reduced-geometry bounded proof evidence. All results are depth-stated open-source checks, not exhaustive cache correctness or commercial formal signoff.
+""")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", choices=("all", "cover", "mutations", "small"), default="all")
@@ -76,20 +101,7 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=rows[0].keys(), lineterminator="\n")
         writer.writeheader(); writer.writerows(rows)
     passed = sum(row["meets_expectation"] for row in rows)
-    doc_name = "formal_small.md" if args.only == "small" else "formal.md"
-    title = "Small-Geometry Formal Evidence" if args.only == "small" else "Solver-Backed Formal Evidence"
-    (ROOT / "docs" / doc_name).write_text(f"""# {title}
-
-The SymbiYosys harness separates DUT guarantees from AXI environment assumptions. In particular, cache-generated `WLAST` is asserted; memory-generated `RLAST` placement is assumed legal and the cache response is checked. These tasks target the default parity baseline; optional SECDED behavior is checked by the independent model-backed RAS matrix.
-
-| Task | Kind | Observed | Expected | Meets expectation | Depth | Runtime |
-| --- | --- | --- | --- | --- | ---: | ---: |
-""" + "".join(f"| `{row['task']}` | `{row['kind']}` | {row['status']} | {row['expected']} | {'yes' if row['meets_expectation'] else 'no'} | {row['depth']} | {row['runtime_seconds']} s |\n" for row in rows) + """
-
-Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. The canonical formal lane separately requires hits, misses, dirty evictions, error responses, and maintenance completion to be reachable. Error paths are sensitized by the bounded containment task and expected-failing mutations where included.
-
-These are depth-stated open-source bounded checks and reachability results for selected invariants, not full cache correctness or commercial formal signoff.
-""")
+    write_combined_doc()
     print(f"FORMAL_PROVE|status={'PASS' if passed == len(rows) else 'FAIL'}|passed={passed}|total={len(rows)}")
     return 0 if passed == len(rows) else 1
 

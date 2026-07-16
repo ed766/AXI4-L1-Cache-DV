@@ -20,15 +20,17 @@ def classify(row: dict[str, str]) -> tuple[str, str]:
 
     if exclusion and exclusion != "none":
         return exclusion, "Already excluded from reviewed coverage with structural rationale."
-    if group == "baseline_2way" and point == "branch" and "merge_word" in signal:
+    if point == "branch" and line == 234:
         return "verilator_instrumentation_artifact", "All 16 byte-strobe masks are exercised by byte_strobe_lane_matrix; the remaining branch point is a Verilator instrumentation artifact."
-    if group == "baseline_2way" and ("WAYS" in signal or line in (309, 380)):
+    if line in (309, 380, 434, 515):
         return "direct_mapped_structural_variant_only", "Covered by the direct-mapped CACHE_WAYS=1 structural variant, not by baseline 2-way closure."
     if point == "toggle" and any(name in signal for name in ("tags", "data_mem", "parity_mem", "refill_buf", "valid_bits", "dirty_bits", "lru")):
         return "storage_array_toggle_not_closure_target", "Storage and state-array bit toggles are reported raw but not chased as closure targets."
     if point == "line" and line >= 430:
         return "assertion_or_default_non_executable", "Defensive/default or assertion-adjacent RTL path; kept visible in raw coverage."
-    if rtl_file == "l1_dcache_top.sv" and point in ("line", "branch", "expression"):
+    if group != "combined_structural_variants" and rtl_file == "l1_dcache_top.sv" and point in ("line", "branch", "expression"):
+        return "suite_specific_raw_gap", "Uncovered in this individual run group; disposition is based on the combined structural-variant union."
+    if group == "combined_structural_variants" and rtl_file == "l1_dcache_top.sv" and point in ("line", "branch", "expression"):
         return "executable_and_worth_testing", "Potential candidate for a future targeted coverage-edge test if it maps to legal architecture behavior."
     return "reviewed_no_action", "Reviewed and retained as non-gating raw coverage evidence."
 
@@ -75,6 +77,7 @@ The canonical closure model is functional coverage (`21 / 21`) plus trace-derive
         "assertion_or_default_non_executable": "Assertion/default-adjacent path kept visible in raw coverage.",
         "verilator_instrumentation_artifact": "Verilator branch artifact after directed stimulus covers the intended behavior.",
         "reviewed_no_action": "Reviewed non-gating evidence.",
+        "suite_specific_raw_gap": "A per-suite gap reviewed against the combined structural-variant execution union.",
     }
     for category, count in sorted(counts.items()):
         text += f"| `{category}` | {count} | {descriptions.get(category, 'Reviewed coverage hole category.')} |\n"
@@ -84,6 +87,8 @@ The canonical closure model is functional coverage (`21 / 21`) plus trace-derive
 
 - The byte-strobe merge path is exercised with all 16 `WSTRB` masks by `byte_strobe_lane_matrix`; any remaining `merge_word()` branch hole is treated as instrumentation-level evidence, not a missing architectural case.
 - `WAYS == 1` paths are covered through the direct-mapped structural-variant coverage group and associativity checks, not through baseline 2-way closure.
+- SECDED-only paths are executed in the separately reported `secded_2way_variant` group.
+- `combined_structural_variants` is used to disposition suite-specific holes, never to inflate the baseline metric.
 - Raw toggle coverage is expected to remain lower than line/branch coverage because cache arrays dominate toggle points. Reviewed closure does not chase every storage bit.
 - Coverage-edge scenarios are non-gating evidence. They do not inflate the canonical feature coverage count.
 

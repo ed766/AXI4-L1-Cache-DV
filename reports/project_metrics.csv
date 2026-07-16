@@ -1,0 +1,12 @@
+metric,value
+directed_regression,22 / 22
+functional_coverage,21 / 21
+seeded_stress,100 / 100
+trace_replay,127 / 127
+interaction_coverage,55 / 55
+mutation_detection,4 / 4
+secded_ras_coverage,7 / 7
+raw_baseline_line_coverage,74.24%
+reviewed_baseline_line_coverage,100.00%
+raw_baseline_branch_coverage,87.50%
+raw_baseline_toggle_coverage,61.19%

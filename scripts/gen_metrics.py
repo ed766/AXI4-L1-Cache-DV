@@ -30,6 +30,9 @@ rtl_line_pct = float(codecov.get("line", {}).get("raw_percent", 0) or 0)
 rtl_line_reviewed_pct = float(codecov.get("line", {}).get("reviewed_percent", 0) or 0)
 rtl_branch_pct = float(codecov.get("branch", {}).get("raw_percent", 0) or 0)
 rtl_toggle_pct = float(codecov.get("toggle", {}).get("raw_percent", 0) or 0)
+line_raw_pair = f"{codecov.get('line', {}).get('raw_hit', '0')} / {codecov.get('line', {}).get('raw_total', '0')}"
+line_reviewed_pair = f"{codecov.get('line', {}).get('reviewed_hit', '0')} / {codecov.get('line', {}).get('reviewed_total', '0')}"
+line_excluded = codecov.get("line", {}).get("excluded", "0")
 edge_path = ROOT / "reports" / "coverage_edges_summary.csv"
 edge_rows = list(csv.DictReader(edge_path.open())) if edge_path.exists() else []
 edge_pass = sum(row.get("status") == "PASS" for row in edge_rows)
@@ -79,6 +82,23 @@ ras_cov_rows = list(csv.DictReader(ras_cov_path.open())) if ras_cov_path.exists(
 ras_cov = sum(row.get("status") == "COVERED" for row in ras_cov_rows)
 assertion_text = (ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv").read_text()
 assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", assertion_text)))
+machine_metrics = [
+    ("directed_regression", f"{passed} / {len(rows)}"),
+    ("functional_coverage", f"{coverage_hit} / {len(coverage_rows)}"),
+    ("seeded_stress", f"{stress_pass} / {len(stress_rows)}"),
+    ("trace_replay", f"{model_pass} / {len(model_rows)}"),
+    ("interaction_coverage", f"{cross_hit} / {len(cross_rows)}"),
+    ("mutation_detection", f"{bugs_hit} / {len(bug_rows)}"),
+    ("secded_ras_coverage", f"{ras_cov} / {len(ras_cov_rows)}"),
+    ("raw_baseline_line_coverage", f"{rtl_line_pct:.2f}%"),
+    ("reviewed_baseline_line_coverage", f"{rtl_line_reviewed_pct:.2f}%"),
+    ("raw_baseline_branch_coverage", f"{rtl_branch_pct:.2f}%"),
+    ("raw_baseline_toggle_coverage", f"{rtl_toggle_pct:.2f}%"),
+]
+with (ROOT / "reports" / "project_metrics.csv").open("w", newline="") as handle:
+    writer = csv.writer(handle, lineterminator="\n")
+    writer.writerow(["metric", "value"])
+    writer.writerows(machine_metrics)
 text = f"""# Project Metrics
 
 Generated from `reports/regress_summary.csv`. These are behavioral Verilator results, not silicon-signoff metrics.
@@ -109,8 +129,8 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | SECDED RAS coverage | {ras_cov} / {len(ras_cov_rows)} |
 | Named protocol/architecture assertions | {assertion_count} |
 | Optional coverage-edge scenarios | {edge_pass} / {len(edge_rows)} |
-| Design RTL line coverage proxy | {rtl_line_pct:.2f}% |
-| Design RTL reviewed line coverage proxy | {rtl_line_reviewed_pct:.2f}% |
+| Design RTL raw line coverage proxy | {line_raw_pair} ({rtl_line_pct:.2f}%) |
+| Design RTL reviewed line coverage proxy | {line_reviewed_pair} ({rtl_line_reviewed_pct:.2f}%); {line_excluded} excluded |
 | Design RTL branch coverage proxy | {rtl_branch_pct:.2f}% |
 | Design RTL raw toggle coverage proxy | {rtl_toggle_pct:.2f}% |
 | Independent C++ model self-test | PASS |
