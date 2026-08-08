@@ -9,7 +9,7 @@ jobs:
   quick:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3
       - name: Warning-clean lint
@@ -21,7 +21,7 @@ jobs:
     needs: quick
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 zlib1g-dev yosys
       - name: Run complete release evidence
@@ -29,7 +29,7 @@ jobs:
       - name: Verify generated reports are reproducible
         run: git diff --exit-code
       - name: Upload curated verification reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cache-verification-reports
           path: |
@@ -50,13 +50,13 @@ jobs:
     needs: quick
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Yosys
         run: sudo apt-get update && sudo apt-get install -y yosys python3 make
       - name: Run Yosys synthesis proxy
         run: make synth-characterize
       - name: Upload synthesis proxy reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cache-synthesis-proxy
           path: |
@@ -71,8 +71,8 @@ jobs:
       OSS_CAD_ARCHIVE: oss-cad-suite-linux-x64-20260508.tgz
       OSS_CAD_SHA256: c71735b02df363e2ad8e9f129e477e4f31b18d6532e9bed92eb8ad296101cb6f
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/oss-cad-suite
           key: oss-cad-suite-linux-x64-20260508
@@ -92,7 +92,7 @@ jobs:
       - name: Run small-geometry bounded formal checks
         run: make formal-small-prove
       - name: Upload formal reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cache-formal-reports
           path: |
