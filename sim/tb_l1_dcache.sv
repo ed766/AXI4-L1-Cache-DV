@@ -1331,6 +1331,42 @@ module tb_l1_dcache #(
     issue_maintenance(2'd2);
   endtask
 
+  task automatic run_cache_array_bist;
+    logic [31:0] ignored;
+    bit error;
+    bit saw_expected_failure;
+    cpu_access(0, 32'h0000_6400, 0, 0, 2, ignored, error);
+    if (error) begin $error("BIST setup refill failed"); failures++; end
+    if (CACHE_SECDED_ENABLE)
+      dut.ecc_mem[0][32][0] = dut.ecc_mem[0][32][0] ^ 7'b0000001;
+    else
+      dut.parity_mem[0][32][0] = ~dut.parity_mem[0][32][0];
+    @(negedge clk); maint_valid = 1; maint_cmd = 2'd3;
+    do @(posedge clk); while (!maint_ready);
+    @(negedge clk); maint_valid = 0;
+    do @(posedge clk); while (!maint_done);
+    saw_expected_failure = maint_error;
+    if (!saw_expected_failure || !dut.bist_fail || dut.bist_fail_set != 32 ||
+        dut.bist_fail_word != 0) begin
+      $error("Integrated cache-array BIST missed integrity fault"); failures++;
+    end
+    $display("CACHE_BIST_COVER|point=%s|status=COVERED",
+      CACHE_SECDED_ENABLE ? "secded_integrity_precheck" : "parity_integrity_precheck");
+    $display("CACHE_BIST_COVER|point=first_failure_metadata|status=COVERED");
+    $display("CACHE_BIST_COVER|point=destructive_array_scan|status=COVERED");
+
+    @(negedge clk); maint_valid = 1; maint_cmd = 2'd3;
+    do @(posedge clk); while (!maint_ready);
+    @(negedge clk); maint_valid = 0;
+    do @(posedge clk); while (!maint_done);
+    if (maint_error || dut.bist_fail) begin
+      $error("Clean integrated cache-array BIST failed"); failures++;
+    end
+    $display("CACHE_BIST_COVER|point=clean_retest|status=COVERED");
+    expect_read(32'h0000_6400, memory[32'h6400 >> 2]);
+    $display("CACHE_BIST_COVER|point=post_bist_cache_reuse|status=COVERED");
+  endtask
+
   initial begin
     if (!$value$plusargs("TEST=%s", test_name)) test_name = "smoke";
     void'($value$plusargs("STALL_MOD=%d", stall_mod));
@@ -1387,6 +1423,7 @@ module tb_l1_dcache #(
       "maintenance_dirty_error_boundary": run_maintenance_dirty_error_boundary();
       "maintenance_backpressure_boundary": run_maintenance_backpressure_boundary();
       "secded_ras_matrix": run_secded_ras_matrix();
+      "cache_array_bist": run_cache_array_bist();
       "cross_matrix": run_cross_matrix();
       "performance_workload": run_performance_workload();
       "random": run_random();

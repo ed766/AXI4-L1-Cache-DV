@@ -1,0 +1,7 @@
+coverage_point,status,variants
+parity_integrity_precheck,COVERED,parity
+secded_integrity_precheck,COVERED,secded
+first_failure_metadata,COVERED,parity;secded
+destructive_array_scan,COVERED,parity;secded
+clean_retest,COVERED,parity;secded
+post_bist_cache_reuse,COVERED,parity;secded

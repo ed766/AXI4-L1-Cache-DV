@@ -1,0 +1,8 @@
+feature,status
+clean_march_c_minus,PASS
+stuck_at_zero_first_address,PASS
+stuck_at_one_last_address,PASS
+stuck_at_zero_middle_address,PASS
+functional_port,PASS
+busy_owns_sram_port,PASS
+reset_clears_status,PASS

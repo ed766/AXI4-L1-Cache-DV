@@ -6,7 +6,13 @@ trace_replay,127 / 127
 interaction_coverage,55 / 55
 mutation_detection,4 / 4
 secded_ras_coverage,7 / 7
-raw_baseline_line_coverage,74.24%
-reviewed_baseline_line_coverage,100.00%
-raw_baseline_branch_coverage,87.50%
-raw_baseline_toggle_coverage,61.19%
+optional_msi_coherence,16 / 16
+msi_model_random,25 / 25
+msi_mutations,3 / 3
+sram_bist,7 / 7
+integrated_cache_array_bist,2 / 2
+raw_baseline_line_coverage,69.01%
+reviewed_baseline_line_coverage,96.43%
+raw_2way_execution_union_line_coverage,76.06%
+raw_baseline_branch_coverage,76.19%
+raw_baseline_toggle_coverage,57.45%

@@ -1,0 +1,3 @@
+variant,status,cells,memory_bits
+msi_two_cache,PASS,2389,0
+cache_sram_bist,PASS,411,0

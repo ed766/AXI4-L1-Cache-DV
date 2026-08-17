@@ -11,6 +11,8 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Directed/random SV | Fast executable behavior and protocol checks | `make regress` |
 | C++ trace replay | Independent response, replacement, AXI, and memory prediction | `make model-trace-check` |
 | SECDED/RAS | Optional correction, scrub, dirty-writeback, and double-error containment matrix | `make ras-check` |
+| MSI coherence extension | Two-node sharing, invalidation, dirty intervention, eviction, and arbitration checks | `make coherence-check` |
+| SRAM BIST extension | March C-minus clean/fault runs and first-failure diagnostics | `make bist-check` |
 | Assertions | Temporal and accounting invariants | enabled by regression |
 | Formal | Bounded solver-backed safety/error checks, covers, and mutations | `make formal-prove` |
 | Small-geometry formal | Reduced 2-set 1-way/2-way bounded proof and cover lane | `make formal-small-prove` |
@@ -35,6 +37,8 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - Coverage edges: reset on every refill/writeback beat, read-error beat matrix, writeback-error containment, invalid-way preference, LRU walk, and maintenance boundary stress.
 - Random: manifest-driven operation mix, address distributions, conflicts, strobes, stalls, errors, reset timing, and reproducible seeds.
 - RAS: single-bit data/code correction, read scrub, double-bit detection, corrected dirty eviction and maintenance, and uncorrectable dirty-line containment.
+- Coherence extension: shared reads, write invalidation, modified-owner intervention, dirty conflict eviction, simultaneous requester serialization, and stale-data prevention.
+- BIST extension: clean March C-minus, stuck-at-zero/one faults at boundary and middle addresses, functional-port ownership, and reset recovery.
 
 ## Release Targets
 
@@ -51,5 +55,6 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - UVM runtime evidence remains explicitly separate from default closure unless real phase runtime is stable across the supported environment.
 - Every implemented bug mutation is detected by a test, assertion, or scoreboard.
 - The optional SECDED variant must close all seven RAS points without changing parity-baseline closure metrics.
+- Optional MSI and SRAM-BIST results remain separately reported and must not inflate the baseline `21 / 21` feature-coverage model.
 
 Current results must be read from generated reports; targets are not presented as completed results.

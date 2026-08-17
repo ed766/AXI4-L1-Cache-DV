@@ -1,0 +1,8 @@
+coverage_point,status,source
+clean_march_c_minus,COVERED,tb_cache_sram_bist
+stuck_at_zero_first_address,COVERED,tb_cache_sram_bist
+stuck_at_one_last_address,COVERED,tb_cache_sram_bist
+stuck_at_zero_middle_address,COVERED,tb_cache_sram_bist
+functional_port,COVERED,tb_cache_sram_bist
+busy_owns_sram_port,COVERED,tb_cache_sram_bist
+reset_clears_status,COVERED,tb_cache_sram_bist

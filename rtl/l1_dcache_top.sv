@@ -135,6 +135,14 @@ module l1_dcache_top #(
   logic [INDEX_BITS-1:0] maint_set;
   logic maint_way;
   logic maint_error_q;
+  logic [2:0] bist_phase;
+  logic [2:0] bist_word;
+  logic bist_fail;
+  logic [INDEX_BITS-1:0] bist_fail_set;
+  logic bist_fail_way;
+  logic [2:0] bist_fail_word;
+  logic [31:0] bist_fail_expected;
+  logic [31:0] bist_fail_observed;
   logic ecc_corrected_pulse;
   logic ecc_uncorrectable_pulse;
   logic ecc_scrub_write;
@@ -337,6 +345,14 @@ module l1_dcache_top #(
       maint_error <= 1'b0;
       maint_active_q <= 1'b0;
       maint_error_q <= 1'b0;
+      bist_phase <= '0;
+      bist_word <= '0;
+      bist_fail <= 1'b0;
+      bist_fail_set <= '0;
+      bist_fail_way <= 1'b0;
+      bist_fail_word <= '0;
+      bist_fail_expected <= '0;
+      bist_fail_observed <= '0;
       wb_beat <= '0;
       refill_beat <= '0;
       refill_error <= 1'b0;
@@ -373,6 +389,16 @@ module l1_dcache_top #(
             maint_way <= 1'b0;
             maint_error_q <= 1'b0;
             maint_error <= 1'b0;
+            if (maint_cmd == 2'd3) begin
+              bist_phase <= '0;
+              bist_word <= '0;
+              bist_fail <= 1'b0;
+              bist_fail_set <= '0;
+              bist_fail_way <= 1'b0;
+              bist_fail_word <= '0;
+              bist_fail_expected <= '0;
+              bist_fail_observed <= '0;
+            end
             state <= ST_MAINT_SCAN;
           end else if (cpu_req_valid) begin
             req_addr_q <= cpu_req_addr;
@@ -520,7 +546,68 @@ module l1_dcache_top #(
         ST_RESPONSE: if (!cpu_rsp_valid || cpu_rsp_ready) state <= ST_IDLE;
 
         ST_MAINT_SCAN: begin
-          if (maint_set == LAST_SET && (WAYS == 1 || maint_way) &&
+          if (maint_cmd_q == 2'd3) begin : cache_array_bist
+            // COVERAGE_OPTIONAL_BIST_BEGIN
+            logic [31:0] observed_word;
+            logic [33:0] decoded_word;
+            logic integrity_bad;
+            logic compare_bad;
+            observed_word = data_mem[maint_way][maint_set][bist_word];
+            decoded_word = secded_decode(observed_word, ecc_mem[maint_way][maint_set][bist_word]);
+            integrity_bad = valid_bits[maint_way][maint_set] &&
+                ((PARITY_ENABLE && parity_mem[maint_way][maint_set][bist_word] != word_parity(observed_word)) ||
+                 (SECDED_ENABLE && (decoded_word[32] || decoded_word[33])));
+            compare_bad = (bist_phase == 3'd2 && observed_word !== 32'h0000_0000) ||
+                          (bist_phase == 3'd3 && observed_word !== 32'hffff_ffff) ||
+                          (bist_phase == 3'd4 && observed_word !== 32'h0000_0000);
+            if (!bist_fail && ((bist_phase == 0 && integrity_bad) || compare_bad)) begin
+              bist_fail <= 1'b1;
+              bist_fail_set <= maint_set;
+              bist_fail_way <= maint_way;
+              bist_fail_word <= bist_word;
+              bist_fail_expected <= bist_phase == 3'd3 ? 32'hffff_ffff : 32'h0000_0000;
+              bist_fail_observed <= observed_word;
+              maint_error_q <= 1'b1;
+            end
+
+            if (bist_phase == 3'd1 || bist_phase == 3'd3) begin
+              data_mem[maint_way][maint_set][bist_word] <= 32'h0000_0000;
+              parity_mem[maint_way][maint_set][bist_word] <= 1'b0;
+              ecc_mem[maint_way][maint_set][bist_word] <= secded_encode(32'h0000_0000);
+            end else if (bist_phase == 3'd2) begin
+              data_mem[maint_way][maint_set][bist_word] <= 32'hffff_ffff;
+              parity_mem[maint_way][maint_set][bist_word] <= 1'b0;
+              ecc_mem[maint_way][maint_set][bist_word] <= secded_encode(32'hffff_ffff);
+            end
+            if (bist_phase == 3'd4 && bist_word == 3'd7) begin
+              valid_bits[maint_way][maint_set] <= 1'b0;
+              dirty_bits[maint_way][maint_set] <= 1'b0;
+            end
+
+            if (maint_set == LAST_SET && (WAYS == 1 || maint_way) && bist_word == 3'd7) begin
+              if (bist_phase == 3'd4) begin
+                maint_active_q <= 1'b0;
+                maint_done <= 1'b1;
+                maint_error <= maint_error_q ||
+                    ((bist_phase == 0 && integrity_bad) || compare_bad);
+                state <= ST_IDLE;
+              end else begin
+                bist_phase <= bist_phase + 1'b1;
+                bist_word <= '0;
+                maint_way <= 1'b0;
+                maint_set <= '0;
+              end
+            end else if (bist_word == 3'd7) begin
+              bist_word <= '0;
+              if (WAYS == 1 || maint_way) begin
+                maint_way <= 1'b0;
+                maint_set <= maint_set + 1'b1;
+              end else maint_way <= 1'b1;
+            end else begin
+              bist_word <= bist_word + 1'b1;
+            end
+            // COVERAGE_OPTIONAL_BIST_END
+          end else if (maint_set == LAST_SET && (WAYS == 1 || maint_way) &&
               !(dirty_bits[maint_way][maint_set] && maint_cmd_q != 2'd1)) begin
             if (maint_cmd_q != 2'd0) valid_bits[maint_way][maint_set] <= 1'b0;
             maint_active_q <= 1'b0;

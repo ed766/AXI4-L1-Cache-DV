@@ -1,0 +1,17 @@
+coverage_point,status,source
+cold_read_c0,COVERED,tb_msi_two_cache
+shared_read_c1,COVERED,tb_msi_two_cache
+shared_to_modified,COVERED,tb_msi_two_cache
+dirty_intervention,COVERED,tb_msi_two_cache
+write_invalidation,COVERED,tb_msi_two_cache
+post_invalidation_read,COVERED,tb_msi_two_cache
+dirty_owner_setup,COVERED,tb_msi_two_cache
+dirty_conflict_evict,COVERED,tb_msi_two_cache
+eviction_writeback_visible,COVERED,tb_msi_two_cache
+simultaneous_c0,COVERED,tb_msi_two_cache
+simultaneous_c1,COVERED,tb_msi_two_cache
+read_miss_counter,COVERED,tb_msi_two_cache
+write_miss_counter,COVERED,tb_msi_two_cache
+invalidation_counter,COVERED,tb_msi_two_cache
+intervention_counter,COVERED,tb_msi_two_cache
+writeback_counter,COVERED,tb_msi_two_cache

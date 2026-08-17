@@ -6,16 +6,16 @@ The canonical closure model is functional coverage (`21 / 21`) plus trace-derive
 
 | Category | Count | Meaning |
 | --- | ---: | --- |
-| `assertion_declaration_not_executable_rtl` | 20 | Assertion/declaration instrumentation, not executable datapath RTL. |
-| `assertion_or_default_non_executable` | 6 | Assertion/default-adjacent path kept visible in raw coverage. |
-| `compile_time_inactive_secded_variant` | 66 | Reviewed coverage hole category. |
-| `direct_mapped_structural_variant_only` | 8 | Only reachable in the `CACHE_WAYS=1` structural variant. |
-| `memory_array_bit_toggle` | 766 | Storage-array toggle points excluded from reviewed toggle closure. |
-| `reviewed_no_action` | 1239 | Reviewed non-gating evidence. |
-| `storage_array_toggle_not_closure_target` | 1399 | Raw toggle points retained but not chased as closure targets. |
-| `suite_specific_raw_gap` | 40 | A per-suite gap reviewed against the combined structural-variant execution union. |
-| `unreachable_defensive_default` | 5 | Defensive/default paths not reachable in legal baseline operation. |
-| `verilator_instrumentation_artifact` | 3 | Verilator branch artifact after directed stimulus covers the intended behavior. |
+| `assertion_declaration_not_executable_rtl` | 24 | Assertion/declaration instrumentation, not executable datapath RTL. |
+| `assertion_or_default_non_executable` | 17 | Assertion/default-adjacent path kept visible in raw coverage. |
+| `compile_time_inactive_secded_variant` | 88 | Reviewed coverage hole category. |
+| `executable_and_worth_testing` | 1 | Reachable-looking RTL that could justify future targeted tests. |
+| `memory_array_bit_toggle` | 894 | Storage-array toggle points excluded from reviewed toggle closure. |
+| `optional_cache_array_bist_lane` | 95 | Reviewed coverage hole category. |
+| `reviewed_no_action` | 1775 | Reviewed non-gating evidence. |
+| `storage_array_toggle_not_closure_target` | 1510 | Raw toggle points retained but not chased as closure targets. |
+| `suite_specific_raw_gap` | 79 | A per-suite gap reviewed against the combined structural-variant execution union. |
+| `unreachable_defensive_default` | 6 | Defensive/default paths not reachable in legal baseline operation. |
 
 
 ## Specific Review Notes

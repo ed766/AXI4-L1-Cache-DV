@@ -26,12 +26,19 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | UVM runtime smoke collateral | 0 PASS / 3 SKIP / 3 total |
 | Optional SECDED RAS matrix | 1 / 1 |
 | SECDED RAS coverage | 7 / 7 |
-| Named protocol/architecture assertions | 20 |
-| Optional coverage-edge scenarios | 19 / 19 |
-| Design RTL raw line coverage proxy | 49 / 66 (74.24%) |
-| Design RTL reviewed line coverage proxy | 27 / 27 (100.00%); 39 excluded |
-| Design RTL branch coverage proxy | 87.50% |
-| Design RTL raw toggle coverage proxy | 61.19% |
+| Optional two-cache MSI checks | 16 / 16 |
+| C++-modeled randomized MSI seeds | 25 / 25 |
+| MSI mutations detected | 3 / 3 |
+| SRAM March C-minus BIST checks | 7 / 7 |
+| Integrated parity/SECDED cache-array BIST | 2 / 2 |
+| Named protocol/architecture assertions | 22 |
+| Optional coverage-edge scenarios | 20 / 20 |
+| Design RTL raw line coverage proxy | 49 / 71 (69.01%) |
+| Design RTL reviewed line coverage proxy | 27 / 28 (96.43%); 43 excluded |
+| Design RTL raw 2-way baseline + edge line coverage | 54 / 71 (76.06%) |
+| Design RTL reviewed 2-way baseline + edge line coverage | 32 / 32 (100.00%); 39 excluded |
+| Design RTL branch coverage proxy | 76.19% |
+| Design RTL raw toggle coverage proxy | 57.45% |
 | Independent C++ model self-test | PASS |
 
 ## Evidence Boundaries

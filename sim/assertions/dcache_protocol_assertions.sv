@@ -59,10 +59,16 @@ module dcache_protocol_assertions #(
   input logic [1:0] refill_beat,
   input logic maint_valid,
   input logic maint_busy,
+  input logic maint_done,
   input logic maint_error,
   input logic ecc_corrected_pulse,
   input logic ecc_uncorrectable_pulse,
-  input logic ecc_scrub_write
+  input logic ecc_scrub_write,
+  input logic [1:0] maint_cmd_q,
+  input logic maint_active_q,
+  input logic bist_fail,
+  input logic [31:0] bist_fail_expected,
+  input logic [31:0] bist_fail_observed
 );
   import dcache_pkg::ST_LOOKUP;
   import dcache_pkg::ST_WB_AW;
@@ -167,6 +173,11 @@ module dcache_protocol_assertions #(
     ecc_scrub_write |-> ecc_corrected_pulse);
   a_secded_uncorrectable_reports_error: assert property (@(posedge clk) disable iff (!rst_n)
     ecc_uncorrectable_pulse |=> cpu_rsp_error || maint_error || maint_busy);
+  a_bist_failure_metadata_stable: assert property (@(posedge clk) disable iff (!rst_n)
+    maint_active_q && maint_cmd_q == 2'd3 && bist_fail
+      |=> bist_fail && $stable({bist_fail_expected, bist_fail_observed}));
+  a_bist_completion_releases_maintenance: assert property (@(posedge clk) disable iff (!rst_n)
+    maint_done && maint_cmd_q == 2'd3 |-> !maint_active_q);
 endmodule
 
 bind l1_dcache_top dcache_protocol_assertions #(.TAG_BITS(TAG_BITS), .WAYS(WAYS))

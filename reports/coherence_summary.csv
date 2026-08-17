@@ -1,0 +1,17 @@
+feature,status
+cold_read_c0,PASS
+shared_read_c1,PASS
+shared_to_modified,PASS
+dirty_intervention,PASS
+write_invalidation,PASS
+post_invalidation_read,PASS
+dirty_owner_setup,PASS
+dirty_conflict_evict,PASS
+eviction_writeback_visible,PASS
+simultaneous_c0,PASS
+simultaneous_c1,PASS
+read_miss_counter,PASS
+write_miss_counter,PASS
+invalidation_counter,PASS
+intervention_counter,PASS
+writeback_counter,PASS

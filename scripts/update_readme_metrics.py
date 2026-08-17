@@ -27,6 +27,9 @@ def main() -> int:
     line = baseline["line"]
     branch = baseline["branch"]
     toggle = baseline["toggle"]
+    two_way_edges = {row["point_type"]: row for row in coverage
+                     if row["coverage_group"] == "baseline_plus_2way_edges"}
+    edge_line = two_way_edges["line"]
     values = (
         ("Directed scenarios", pair("regress_summary.csv", "status", "PASS")),
         ("Seeded stress", pair("stress_summary.csv", "status", "PASS")),
@@ -35,8 +38,14 @@ def main() -> int:
         ("Interaction coverage", pair("cache_cross_coverage.csv", "status", "COVERED")),
         ("Mutation detection", pair("bug_validation.csv", "status", "DETECTED")),
         ("SECDED RAS coverage", pair("ras_coverage.csv", "status", "COVERED")),
+        ("Optional MSI coherence", pair("coherence_summary.csv", "status", "PASS")),
+        ("C++-modeled MSI random seeds", pair("msi_random_summary.csv", "status", "PASS")),
+        ("MSI mutation detection", pair("msi_mutation_summary.csv", "status", "DETECTED")),
+        ("SRAM BIST", pair("bist_summary.csv", "status", "PASS")),
+        ("Integrated cache-array BIST", pair("cache_array_bist_summary.csv", "status", "PASS")),
         ("Raw baseline line coverage", f"{line['raw_hit']} / {line['raw_total']} ({line['raw_percent']}%)"),
         ("Reviewed baseline line coverage", f"{line['reviewed_hit']} / {line['reviewed_total']} ({line['reviewed_percent']}%); {line['excluded']} excluded"),
+        ("2-way baseline + edge line coverage", f"raw {edge_line['raw_hit']} / {edge_line['raw_total']} ({edge_line['raw_percent']}%); reviewed {edge_line['reviewed_hit']} / {edge_line['reviewed_total']} ({edge_line['reviewed_percent']}%); {edge_line['excluded']} excluded"),
         ("Raw branch / toggle coverage", f"{branch['raw_percent']}% / {toggle['raw_percent']}%"),
     )
     block = [START, "| Evidence | Current result |", "| --- | ---: |"]

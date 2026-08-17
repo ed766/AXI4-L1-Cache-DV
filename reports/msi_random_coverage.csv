@@ -1,0 +1,9 @@
+coverage_point,status
+read_miss,COVERED
+write_miss,COVERED
+invalidation,COVERED
+dirty_intervention,COVERED
+dirty_conflict_writeback,COVERED
+both_owners,COVERED
+read_write_mix,COVERED
+hot_line_ping_pong,COVERED

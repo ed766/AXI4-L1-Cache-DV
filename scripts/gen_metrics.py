@@ -26,6 +26,9 @@ if codecov_rows and "coverage_group" in codecov_rows[0]:
 else:
     primary_codecov_rows = codecov_rows
 codecov = {row["point_type"]: row for row in primary_codecov_rows}
+edge_codecov_rows = [row for row in codecov_rows
+                     if row.get("coverage_group") == "baseline_plus_2way_edges"]
+edge_codecov = {row["point_type"]: row for row in edge_codecov_rows}
 rtl_line_pct = float(codecov.get("line", {}).get("raw_percent", 0) or 0)
 rtl_line_reviewed_pct = float(codecov.get("line", {}).get("reviewed_percent", 0) or 0)
 rtl_branch_pct = float(codecov.get("branch", {}).get("raw_percent", 0) or 0)
@@ -33,6 +36,7 @@ rtl_toggle_pct = float(codecov.get("toggle", {}).get("raw_percent", 0) or 0)
 line_raw_pair = f"{codecov.get('line', {}).get('raw_hit', '0')} / {codecov.get('line', {}).get('raw_total', '0')}"
 line_reviewed_pair = f"{codecov.get('line', {}).get('reviewed_hit', '0')} / {codecov.get('line', {}).get('reviewed_total', '0')}"
 line_excluded = codecov.get("line", {}).get("excluded", "0")
+edge_line_pct = float(edge_codecov.get("line", {}).get("raw_percent", 0) or 0)
 edge_path = ROOT / "reports" / "coverage_edges_summary.csv"
 edge_rows = list(csv.DictReader(edge_path.open())) if edge_path.exists() else []
 edge_pass = sum(row.get("status") == "PASS" for row in edge_rows)
@@ -80,6 +84,21 @@ ras_pass = sum(row.get("status") == "PASS" for row in ras_rows)
 ras_cov_path = ROOT / "reports" / "ras_coverage.csv"
 ras_cov_rows = list(csv.DictReader(ras_cov_path.open())) if ras_cov_path.exists() else []
 ras_cov = sum(row.get("status") == "COVERED" for row in ras_cov_rows)
+coherence_path = ROOT / "reports" / "coherence_summary.csv"
+coherence_rows = list(csv.DictReader(coherence_path.open())) if coherence_path.exists() else []
+coherence_pass = sum(row.get("status") == "PASS" for row in coherence_rows)
+bist_path = ROOT / "reports" / "bist_summary.csv"
+bist_rows = list(csv.DictReader(bist_path.open())) if bist_path.exists() else []
+bist_pass = sum(row.get("status") == "PASS" for row in bist_rows)
+msi_random_path = ROOT / "reports" / "msi_random_summary.csv"
+msi_random_rows = list(csv.DictReader(msi_random_path.open())) if msi_random_path.exists() else []
+msi_random_pass = sum(row.get("status") == "PASS" for row in msi_random_rows)
+msi_mutation_path = ROOT / "reports" / "msi_mutation_summary.csv"
+msi_mutation_rows = list(csv.DictReader(msi_mutation_path.open())) if msi_mutation_path.exists() else []
+msi_mutation_pass = sum(row.get("status") == "DETECTED" for row in msi_mutation_rows)
+array_bist_path = ROOT / "reports" / "cache_array_bist_summary.csv"
+array_bist_rows = list(csv.DictReader(array_bist_path.open())) if array_bist_path.exists() else []
+array_bist_pass = sum(row.get("status") == "PASS" for row in array_bist_rows)
 assertion_text = (ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv").read_text()
 assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", assertion_text)))
 machine_metrics = [
@@ -90,8 +109,14 @@ machine_metrics = [
     ("interaction_coverage", f"{cross_hit} / {len(cross_rows)}"),
     ("mutation_detection", f"{bugs_hit} / {len(bug_rows)}"),
     ("secded_ras_coverage", f"{ras_cov} / {len(ras_cov_rows)}"),
+    ("optional_msi_coherence", f"{coherence_pass} / {len(coherence_rows)}"),
+    ("msi_model_random", f"{msi_random_pass} / {len(msi_random_rows)}"),
+    ("msi_mutations", f"{msi_mutation_pass} / {len(msi_mutation_rows)}"),
+    ("sram_bist", f"{bist_pass} / {len(bist_rows)}"),
+    ("integrated_cache_array_bist", f"{array_bist_pass} / {len(array_bist_rows)}"),
     ("raw_baseline_line_coverage", f"{rtl_line_pct:.2f}%"),
     ("reviewed_baseline_line_coverage", f"{rtl_line_reviewed_pct:.2f}%"),
+    ("raw_2way_execution_union_line_coverage", f"{edge_line_pct:.2f}%"),
     ("raw_baseline_branch_coverage", f"{rtl_branch_pct:.2f}%"),
     ("raw_baseline_toggle_coverage", f"{rtl_toggle_pct:.2f}%"),
 ]
@@ -127,10 +152,17 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | UVM runtime smoke collateral | {uvm_result} |
 | Optional SECDED RAS matrix | {ras_pass} / {len(ras_rows)} |
 | SECDED RAS coverage | {ras_cov} / {len(ras_cov_rows)} |
+| Optional two-cache MSI checks | {coherence_pass} / {len(coherence_rows)} |
+| C++-modeled randomized MSI seeds | {msi_random_pass} / {len(msi_random_rows)} |
+| MSI mutations detected | {msi_mutation_pass} / {len(msi_mutation_rows)} |
+| SRAM March C-minus BIST checks | {bist_pass} / {len(bist_rows)} |
+| Integrated parity/SECDED cache-array BIST | {array_bist_pass} / {len(array_bist_rows)} |
 | Named protocol/architecture assertions | {assertion_count} |
 | Optional coverage-edge scenarios | {edge_pass} / {len(edge_rows)} |
 | Design RTL raw line coverage proxy | {line_raw_pair} ({rtl_line_pct:.2f}%) |
 | Design RTL reviewed line coverage proxy | {line_reviewed_pair} ({rtl_line_reviewed_pct:.2f}%); {line_excluded} excluded |
+| Design RTL raw 2-way baseline + edge line coverage | {edge_codecov.get('line', {}).get('raw_hit', '0')} / {edge_codecov.get('line', {}).get('raw_total', '0')} ({edge_line_pct:.2f}%) |
+| Design RTL reviewed 2-way baseline + edge line coverage | {edge_codecov.get('line', {}).get('reviewed_hit', '0')} / {edge_codecov.get('line', {}).get('reviewed_total', '0')} ({edge_codecov.get('line', {}).get('reviewed_percent', '0')}%); {edge_codecov.get('line', {}).get('excluded', '0')} excluded |
 | Design RTL branch coverage proxy | {rtl_branch_pct:.2f}% |
 | Design RTL raw toggle coverage proxy | {rtl_toggle_pct:.2f}% |
 | Independent C++ model self-test | PASS |

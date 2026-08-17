@@ -24,6 +24,7 @@ EDGE_TESTS = (
     "invalid_way_preference_matrix",
     "maintenance_dirty_error_boundary",
     "maintenance_backpressure_boundary",
+    "cache_array_bist",
 )
 DIRECT_MAPPED_TESTS = ("read_miss", "read_hit", "write_miss", "write_hit", "clean_evict", "dirty_evict", "maintenance")
 

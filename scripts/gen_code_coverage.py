@@ -61,6 +61,25 @@ def secded_function_lines(source: str) -> set[int]:
     return result
 
 
+@functools.lru_cache(maxsize=None)
+def optional_bist_lines(source: str) -> set[int]:
+    path = pathlib.Path(source)
+    if not path.is_absolute():
+        path = ROOT / path
+    if not path.exists():
+        return set()
+    result: set[int] = set()
+    active = False
+    for number, text in enumerate(path.read_text().splitlines(), 1):
+        if "COVERAGE_OPTIONAL_BIST_BEGIN" in text:
+            active = True
+        if active:
+            result.add(number)
+        if "COVERAGE_OPTIONAL_BIST_END" in text:
+            active = False
+    return result
+
+
 def exclusion(group: str, point_type: str, source: str, line: int, object_name: str) -> str:
     source_path = pathlib.Path(source)
     source_text = ""
@@ -69,11 +88,15 @@ def exclusion(group: str, point_type: str, source: str, line: int, object_name: 
         lines = candidate.read_text().splitlines()
         if line <= len(lines):
             source_text = lines[line - 1]
-    if (group in ("baseline_2way", "coverage_edges_2way", "direct_mapped_variant") and
+    if (group in ("baseline_2way", "coverage_edges_2way", "baseline_plus_2way_edges",
+                  "direct_mapped_variant") and
             point_type in ("line", "branch", "expression", "toggle") and
             (line in secded_function_lines(source) or "SECDED_ENABLE" in source_text or
              object_name.startswith("ecc_"))):
         return "compile_time_inactive_secded_variant"
+    if group == "baseline_2way" and (line in optional_bist_lines(source) or
+                                      object_name.startswith("bist_")):
+        return "optional_cache_array_bist_lane"
     if point_type == "line" and object_name == "case" and line > 350:
         return "unreachable_defensive_default"
     if point_type == "line" and object_name == "block" and line >= 385:
@@ -168,6 +191,12 @@ for group, files in available.items():
     summary_rows.extend(rows)
     hole_rows.extend(holes)
 
+if "baseline_2way" in available and "coverage_edges_2way" in available:
+    two_way_files = available["baseline_2way"] + available["coverage_edges_2way"]
+    rows, holes = summarize("baseline_plus_2way_edges", two_way_files, structural_union=True)
+    summary_rows.extend(rows)
+    hole_rows.extend(holes)
+
 if len(available) > 1:
     rows, holes = summarize("combined_structural_variants", all_files, structural_union=True)
     summary_rows.extend(rows)
@@ -205,6 +234,7 @@ for row in summary_rows:
 text += "\n## Coverage Groups\n\n"
 text += "- `baseline_2way`: default 4 KiB, 2-way cache closure run.\n"
 text += "- `coverage_edges_2way`: optional directed edge tests for byte strobes, set/way toggling, and maintenance boundaries.\n"
+text += "- `baseline_plus_2way_edges`: union of baseline and optional 2-way edge executions, without structural variants.\n"
 text += "- `direct_mapped_variant`: optional 4 KiB direct-mapped structural variant compiled with `CACHE_WAYS=1`, `CACHE_SETS=128`.\n"
 text += "- `secded_2way_variant`: optional 2-way SECDED/RAS structural variant.\n"
 text += "- `combined_structural_variants`: union across every executed geometry/integrity variant; never substituted for baseline closure.\n"

@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
+.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check coherence-check bist-check integration-check integration-synth-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
 
 lint:
 	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
@@ -71,6 +71,20 @@ model-test:
 ras-check: model-test
 	$(PYTHON) scripts/run_ras.py
 
+coherence-check:
+	$(PYTHON) scripts/run_integration_features.py coherence
+	$(PYTHON) scripts/run_msi_random.py --seeds 25
+	$(PYTHON) scripts/run_msi_mutations.py
+
+bist-check:
+	$(PYTHON) scripts/run_integration_features.py bist
+	$(PYTHON) scripts/run_cache_array_bist.py
+
+integration-check: coherence-check bist-check
+
+integration-synth-check:
+	$(PYTHON) scripts/run_integration_synthesis.py
+
 formal:
 	@if command -v sby >/dev/null 2>&1; then sby -f formal/cache_safety.sby; \
 	else echo "SKIP: SymbiYosys (sby) is not installed"; fi
@@ -108,11 +122,11 @@ uvm-smoke: uvm-check-env
 uvm-runtime-smoke: uvm-check-env
 	$(PYTHON) scripts/run_uvm.py --runtime-smoke
 
-project-check: lint model-test regress model-trace-check functional-coverage performance stress-manifest
+project-check: lint model-test regress model-trace-check functional-coverage performance stress-manifest integration-check
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/update_readme_metrics.py
 
-release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage coverage-edges associativity-check synth-characterize associativity-characterize ras-check
+release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage coverage-edges associativity-check synth-characterize associativity-characterize ras-check integration-synth-check
 	$(PYTHON) scripts/run_model_trace.py --traces '*.csv'
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/update_readme_metrics.py
