@@ -40,6 +40,8 @@ expected = [
     ("msi_mutation_summary.csv", "status", "DETECTED", "MSI mutation detection"),
     ("bist_summary.csv", "status", "PASS", "SRAM BIST"),
     ("cache_array_bist_summary.csv", "status", "PASS", "Integrated cache-array BIST"),
+    ("nonblocking_cache_summary.csv", "status", "PASS", "Optional non-blocking cache"),
+    ("nonblocking_cache_coverage.csv", "status", "COVERED", "Non-blocking targeted coverage"),
 ]
 readme = README.read_text()
 for report, key, passing, label in expected:

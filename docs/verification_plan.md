@@ -26,6 +26,7 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Mutation tests | Checker sensitivity | `make bug-validate` |
 | Debug waveform | Expected-failure FST and deterministic SVG evidence | `make debug-waveform` |
 | Optional UVM compile/runtime smoke | Secondary methodology collateral, not closure | `make uvm-runtime-smoke` |
+| Optional non-blocking cache | Two-MSHR concurrency, miss merging, refill ordering, and error containment | `make nonblocking-cache-check` |
 
 ## Required Scenario Families
 

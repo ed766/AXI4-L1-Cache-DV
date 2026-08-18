@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check coherence-check bist-check integration-check integration-synth-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
+.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check coherence-check bist-check integration-check integration-synth-check nonblocking-cache-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
 
 lint:
 	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
@@ -9,6 +9,9 @@ lint:
 		rtl/dcache_pkg.sv rtl/l1_dcache_top.sv \
 		sim/assertions/dcache_protocol_assertions.sv \
 		sim/monitors/dcache_trace_observer.sv sim/tb_l1_dcache.sv
+	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
+		-Wno-UNUSEDSIGNAL -Wno-BLKSEQ -Wno-SYNCASYNCNET \
+		rtl/l1_dcache_nonblocking.sv
 
 smoke:
 	$(PYTHON) scripts/run_regression.py --tests smoke
@@ -85,6 +88,9 @@ integration-check: coherence-check bist-check
 integration-synth-check:
 	$(PYTHON) scripts/run_integration_synthesis.py
 
+nonblocking-cache-check:
+	$(PYTHON) scripts/run_nonblocking_cache.py
+
 formal:
 	@if command -v sby >/dev/null 2>&1; then sby -f formal/cache_safety.sby; \
 	else echo "SKIP: SymbiYosys (sby) is not installed"; fi
@@ -126,7 +132,7 @@ project-check: lint model-test regress model-trace-check functional-coverage per
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/update_readme_metrics.py
 
-release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage coverage-edges associativity-check synth-characterize associativity-characterize ras-check integration-synth-check
+release-check: project-check random-stress cache-cross-coverage performance-sweep bug-validate debug-waveform coverage coverage-edges associativity-check synth-characterize associativity-characterize ras-check integration-synth-check nonblocking-cache-check
 	$(PYTHON) scripts/run_model_trace.py --traces '*.csv'
 	$(PYTHON) scripts/gen_metrics.py
 	$(PYTHON) scripts/update_readme_metrics.py

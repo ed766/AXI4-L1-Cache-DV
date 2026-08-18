@@ -11,6 +11,9 @@ msi_model_random,25 / 25
 msi_mutations,3 / 3
 sram_bist,7 / 7
 integrated_cache_array_bist,2 / 2
+optional_nonblocking_cache,11 / 11
+nonblocking_targeted_coverage,12 / 12
+nonblocking_window_speedup,2.080x
 raw_baseline_line_coverage,69.01%
 reviewed_baseline_line_coverage,96.43%
 raw_2way_execution_union_line_coverage,76.06%

@@ -31,6 +31,9 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | MSI mutations detected | 3 / 3 |
 | SRAM March C-minus BIST checks | 7 / 7 |
 | Integrated parity/SECDED cache-array BIST | 2 / 2 |
+| Optional non-blocking cache scenarios | 11 / 11 |
+| Non-blocking targeted coverage | 12 / 12 |
+| Two-entry request-window speedup | 2.080x |
 | Named protocol/architecture assertions | 22 |
 | Optional coverage-edge scenarios | 20 / 20 |
 | Design RTL raw line coverage proxy | 49 / 71 (69.01%) |
@@ -46,5 +49,6 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 - Results are report-backed local verification closure, not commercial signoff.
 - UVM is secondary methodology collateral; runtime reporting is limited and separated from closure.
 - SECDED is a separately verified structural variant; the parity baseline remains the canonical cache configuration.
+- The non-blocking cache is a separate two-MSHR implementation; its same-clock cycle comparison is not a silicon-frequency claim.
 - Formal results are depth-stated bounded safety/error checks plus reachability covers and expected mutation failures, not exhaustive proof of cache correctness.
 - AXI4 behavior is a constrained cache-master subset, not an AXI compliance certification.

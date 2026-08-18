@@ -1,0 +1,3 @@
+mode,requests,cycles,requests_per_cycle,speedup
+serialized,32,778,0.041131,1.000
+two_mshr_window,32,374,0.085561,2.080

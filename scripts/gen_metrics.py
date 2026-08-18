@@ -99,6 +99,16 @@ msi_mutation_pass = sum(row.get("status") == "DETECTED" for row in msi_mutation_
 array_bist_path = ROOT / "reports" / "cache_array_bist_summary.csv"
 array_bist_rows = list(csv.DictReader(array_bist_path.open())) if array_bist_path.exists() else []
 array_bist_pass = sum(row.get("status") == "PASS" for row in array_bist_rows)
+nb_path = ROOT / "reports" / "nonblocking_cache_summary.csv"
+nb_rows = list(csv.DictReader(nb_path.open())) if nb_path.exists() else []
+nb_pass = sum(row.get("status") == "PASS" for row in nb_rows)
+nb_cov_path = ROOT / "reports" / "nonblocking_cache_coverage.csv"
+nb_cov_rows = list(csv.DictReader(nb_cov_path.open())) if nb_cov_path.exists() else []
+nb_cov = sum(row.get("status") == "COVERED" for row in nb_cov_rows)
+nb_perf_path = ROOT / "reports" / "nonblocking_cache_performance.csv"
+nb_perf_rows = list(csv.DictReader(nb_perf_path.open())) if nb_perf_path.exists() else []
+nb_windowed = next((row for row in nb_perf_rows if row.get("mode") == "two_mshr_window"), None)
+nb_speedup = f"{nb_windowed['speedup']}x" if nb_windowed else "NA"
 assertion_text = (ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv").read_text()
 assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", assertion_text)))
 machine_metrics = [
@@ -114,6 +124,9 @@ machine_metrics = [
     ("msi_mutations", f"{msi_mutation_pass} / {len(msi_mutation_rows)}"),
     ("sram_bist", f"{bist_pass} / {len(bist_rows)}"),
     ("integrated_cache_array_bist", f"{array_bist_pass} / {len(array_bist_rows)}"),
+    ("optional_nonblocking_cache", f"{nb_pass} / {len(nb_rows)}"),
+    ("nonblocking_targeted_coverage", f"{nb_cov} / {len(nb_cov_rows)}"),
+    ("nonblocking_window_speedup", nb_speedup),
     ("raw_baseline_line_coverage", f"{rtl_line_pct:.2f}%"),
     ("reviewed_baseline_line_coverage", f"{rtl_line_reviewed_pct:.2f}%"),
     ("raw_2way_execution_union_line_coverage", f"{edge_line_pct:.2f}%"),
@@ -157,6 +170,9 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | MSI mutations detected | {msi_mutation_pass} / {len(msi_mutation_rows)} |
 | SRAM March C-minus BIST checks | {bist_pass} / {len(bist_rows)} |
 | Integrated parity/SECDED cache-array BIST | {array_bist_pass} / {len(array_bist_rows)} |
+| Optional non-blocking cache scenarios | {nb_pass} / {len(nb_rows)} |
+| Non-blocking targeted coverage | {nb_cov} / {len(nb_cov_rows)} |
+| Two-entry request-window speedup | {nb_speedup} |
 | Named protocol/architecture assertions | {assertion_count} |
 | Optional coverage-edge scenarios | {edge_pass} / {len(edge_rows)} |
 | Design RTL raw line coverage proxy | {line_raw_pair} ({rtl_line_pct:.2f}%) |
@@ -172,6 +188,7 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 - Results are report-backed local verification closure, not commercial signoff.
 - UVM is secondary methodology collateral; runtime reporting is limited and separated from closure.
 - SECDED is a separately verified structural variant; the parity baseline remains the canonical cache configuration.
+- The non-blocking cache is a separate two-MSHR implementation; its same-clock cycle comparison is not a silicon-frequency claim.
 - Formal results are depth-stated bounded safety/error checks plus reachability covers and expected mutation failures, not exhaustive proof of cache correctness.
 - AXI4 behavior is a constrained cache-master subset, not an AXI compliance certification.
 """

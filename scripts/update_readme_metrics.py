@@ -30,6 +30,9 @@ def main() -> int:
     two_way_edges = {row["point_type"]: row for row in coverage
                      if row["coverage_group"] == "baseline_plus_2way_edges"}
     edge_line = two_way_edges["line"]
+    nb_perf = table(ROOT / "reports" / "nonblocking_cache_performance.csv")
+    nb_windowed = next((row for row in nb_perf if row.get("mode") == "two_mshr_window"), None)
+    nb_speedup = f"{nb_windowed['speedup']}x" if nb_windowed else "NA"
     values = (
         ("Directed scenarios", pair("regress_summary.csv", "status", "PASS")),
         ("Seeded stress", pair("stress_summary.csv", "status", "PASS")),
@@ -43,6 +46,9 @@ def main() -> int:
         ("MSI mutation detection", pair("msi_mutation_summary.csv", "status", "DETECTED")),
         ("SRAM BIST", pair("bist_summary.csv", "status", "PASS")),
         ("Integrated cache-array BIST", pair("cache_array_bist_summary.csv", "status", "PASS")),
+        ("Optional non-blocking cache", pair("nonblocking_cache_summary.csv", "status", "PASS")),
+        ("Non-blocking targeted coverage", pair("nonblocking_cache_coverage.csv", "status", "COVERED")),
+        ("Two-MSHR request-window speedup", nb_speedup),
         ("Raw baseline line coverage", f"{line['raw_hit']} / {line['raw_total']} ({line['raw_percent']}%)"),
         ("Reviewed baseline line coverage", f"{line['reviewed_hit']} / {line['reviewed_total']} ({line['reviewed_percent']}%); {line['excluded']} excluded"),
         ("2-way baseline + edge line coverage", f"raw {edge_line['raw_hit']} / {edge_line['raw_total']} ({edge_line['raw_percent']}%); reviewed {edge_line['reviewed_hit']} / {edge_line['reviewed_total']} ({edge_line['reviewed_percent']}%); {edge_line['excluded']} excluded"),

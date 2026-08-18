@@ -1,0 +1,12 @@
+test,status,checks,requests,responses,max_mshrs,merged,hit_under_miss,writebacks,cycles
+dual_miss_reorder,PASS,9,2,2,2,0,0,0,42
+hit_under_miss,PASS,13,3,3,1,0,1,0,59
+same_line_merge,PASS,9,2,2,1,1,0,0,37
+dirty_eviction,PASS,22,5,5,1,0,0,1,68
+refill_error,PASS,8,2,2,1,0,0,0,39
+writeback_error_preserve,PASS,25,6,6,1,0,0,1,60
+response_backpressure,PASS,8,2,2,2,0,0,0,45
+reset_outstanding,PASS,5,1,1,1,0,0,0,36
+random,PASS,302,100,100,2,4,37,8,656
+performance_serial,PASS,129,32,32,1,0,0,0,778
+performance_windowed,PASS,98,32,32,2,0,0,0,374
