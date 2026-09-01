@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * 0"
 
 jobs:
   quick:
@@ -11,11 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3
+        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
       - name: Warning-clean lint
         run: make lint
       - name: Reference model and directed regression
         run: make model-test regress
+      - name: GCC dual-RV32 coherent smoke
+        run: make coherent-rv32-smoke
 
   release-evidence:
     needs: quick
@@ -100,3 +104,48 @@ jobs:
             reports/formal_proof_summary.csv
             reports/formal_small_proof_summary.csv
             docs/formal.md
+
+  coherent-release:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    env:
+      OSS_CAD_TAG: 2026-05-08
+      OSS_CAD_ARCHIVE: oss-cad-suite-linux-x64-20260508.tgz
+      OSS_CAD_SHA256: c71735b02df363e2ad8e9f129e477e4f31b18d6532e9bed92eb8ad296101cb6f
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install simulation and RV32 tools
+        run: sudo apt-get update && sudo apt-get install -y verilator g++ make python3 gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/oss-cad-suite
+          key: oss-cad-suite-linux-x64-20260508
+      - name: Install pinned OSS CAD Suite
+        run: |
+          if [ ! -x "$HOME/.cache/oss-cad-suite/bin/sby" ]; then
+            mkdir -p "$HOME/.cache"
+            curl -L --fail --retry 3 \
+              "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${OSS_CAD_TAG}/${OSS_CAD_ARCHIVE}" \
+              -o "/tmp/${OSS_CAD_ARCHIVE}"
+            echo "${OSS_CAD_SHA256}  /tmp/${OSS_CAD_ARCHIVE}" | sha256sum -c -
+            tar -xzf "/tmp/${OSS_CAD_ARCHIVE}" -C "$HOME/.cache"
+          fi
+          echo "$HOME/.cache/oss-cad-suite/bin" >> "$GITHUB_PATH"
+      - name: Run coherent crossover release evidence
+        run: |
+          python3 scripts/install_coherent_external_tools.py
+          make coherent-release-check
+      - name: Verify coherent reports are reproducible
+        run: git diff --exit-code
+      - name: Upload coherent reports and dashboard
+        uses: actions/upload-artifact@v7
+        with:
+          name: dual-rv32-coherent-evidence
+          path: |
+            reports/coherent_*.csv
+            reports/coherent_*.md
+            reports/coherent_*.json
+            docs/coherent_memory_system.md
+            docs/coherent_evidence_explorer.html
+            docs/data/coherent_evidence.json
+            docs/images/coherent_*.svg

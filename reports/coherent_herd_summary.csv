@@ -1,0 +1,17 @@
+litmus,status,allowed_outcomes,observation
+CO-RR,PASS,3,Observation CO-RR Sometimes 1 5
+CO-RR_FENCE,PASS,3,Observation CO-RR_FENCE Sometimes 1 5
+CO-WW,PASS,4,Observation CO-WW Never 0 6
+CO-WW_FENCE,PASS,4,Observation CO-WW_FENCE Never 0 6
+LB,PASS,4,Observation LB Sometimes 1 3
+LB_FENCE,PASS,3,Observation LB_FENCE Sometimes 1 2
+MP,PASS,2,Observation MP Sometimes 2 2
+MP_FENCE,PASS,2,Observation MP_FENCE Sometimes 1 2
+RW,PASS,4,Observation RW Sometimes 1 3
+RW_FENCE,PASS,4,Observation RW_FENCE Sometimes 1 3
+SB,PASS,4,Observation SB Sometimes 1 3
+SB_FENCE,PASS,4,Observation SB_FENCE Never 0 3
+WR,PASS,2,Observation WR Never 0 1
+WRC,PASS,4,Observation WRC Sometimes 1 3
+WRC_FENCE,PASS,4,Observation WRC_FENCE Sometimes 1 3
+WR_FENCE,PASS,2,Observation WR_FENCE Never 0 1

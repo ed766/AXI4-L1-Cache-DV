@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VERILATOR ?= verilator
 
-.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check coherence-check bist-check integration-check integration-synth-check nonblocking-cache-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke project-check release-check clean
+.PHONY: lint smoke regress coverage coverage-edges functional-coverage performance performance-sweep cache-cross-coverage stress-manifest stress random-stress bug-validate debug-waveform readme-metrics docs-check model-test model-trace-check ras-check coherence-check bist-check integration-check integration-synth-check nonblocking-cache-check formal formal-prove formal-small-prove formal-cover formal-mutations synth-characterize associativity-check associativity-characterize uvm-check-env uvm-compile uvm-smoke uvm-runtime-smoke coherent-lint coherent-rv32-smoke coherent-litmus-check coherent-rtl-litmus-check coherent-herd-check coherent-gcc-check coherent-random-check coherent-store-buffer-check coherent-replacement-check coherent-mmio-order-check coherent-reference-check coherent-crossover-check coherent-error-reset-check coherent-qos-concurrency-check coherent-advanced-coverage coherent-assertion-coverage coherent-coverage-review coherent-coverage-edges coherent-formal-prove coherent-mutation-check coherent-code-coverage coherent-performance coherent-dashboard coherent-release-check project-check release-check clean
 
 lint:
 	$(VERILATOR) --lint-only --sv --timing --assert -Wall \
@@ -90,6 +90,85 @@ integration-synth-check:
 
 nonblocking-cache-check:
 	$(PYTHON) scripts/run_nonblocking_cache.py
+
+coherent-lint:
+	verilator --lint-only --sv --timing --assert -Wall \
+		-Wno-UNUSEDSIGNAL -Wno-BLKSEQ -Wno-SYNCASYNCNET -Wno-PINCONNECTEMPTY \
+		-Wno-TIMESCALEMOD -Wno-UNOPTFLAT --top-module tb_coherent_closure \
+		rtl/coherence/msi_two_cache_subsystem.sv \
+		integration/rv32_coherent/rtl/dual_hart_apb_store_buffer.sv \
+		integration/rv32_coherent/vendor/axi/qos_arbiter.sv \
+		integration/rv32_coherent/vendor/axi/axi4_qos_fabric.sv \
+		integration/rv32_coherent/rtl/coherent_axi_qos_transport.sv \
+		integration/rv32_coherent/rtl/banked_msi_home.sv \
+		integration/rv32_coherent/sim/tb_coherent_closure.sv
+
+coherent-rv32-smoke:
+	$(PYTHON) scripts/run_coherent_rv32.py smoke
+
+coherent-litmus-check:
+	$(PYTHON) scripts/run_coherent_model.py litmus
+
+coherent-rtl-litmus-check:
+	$(PYTHON) scripts/run_coherent_rtl_litmus.py
+
+coherent-herd-check:
+	$(PYTHON) scripts/run_coherent_herd.py --require
+
+coherent-gcc-check:
+	$(PYTHON) scripts/run_coherent_rv32.py gcc
+
+coherent-random-check:
+	$(PYTHON) scripts/run_coherent_model.py random
+
+coherent-store-buffer-check coherent-replacement-check coherent-mmio-order-check coherent-reference-check:
+	$(PYTHON) scripts/run_coherent_closure.py
+
+coherent-crossover-check: coherent-store-buffer-check coherent-error-reset-check coherent-qos-concurrency-check
+	$(PYTHON) scripts/gen_coherent_closure_summary.py
+
+coherent-advanced-coverage: coherent-crossover-check
+	$(PYTHON) scripts/gen_coherent_advanced_coverage.py
+
+coherent-assertion-coverage: coherent-advanced-coverage
+	$(PYTHON) scripts/gen_coherent_assertion_activation.py
+
+coherent-coverage-review:
+	$(PYTHON) scripts/check_coherent_coverage_review.py
+
+coherent-error-reset-check:
+	$(PYTHON) scripts/run_coherent_error_reset.py
+
+coherent-qos-concurrency-check:
+	$(PYTHON) scripts/run_coherent_transport_edges.py
+
+coherent-coverage-edges:
+	$(PYTHON) scripts/run_coherent_coverage_edges.py
+
+coherent-formal-prove:
+	$(PYTHON) scripts/run_coherent_formal.py
+
+coherent-mutation-check:
+	$(PYTHON) scripts/run_coherent_model.py mutations
+	$(PYTHON) scripts/run_coherent_rtl_mutations.py
+
+coherent-performance:
+	$(PYTHON) scripts/run_coherent_model.py performance
+	$(PYTHON) scripts/run_coherent_performance_rtl.py
+
+coherent-code-coverage:
+	$(PYTHON) scripts/run_coherent_code_coverage.py
+
+coherent-dashboard:
+	$(PYTHON) scripts/gen_coherent_coverage.py
+	$(PYTHON) scripts/gen_coherent_dashboard.py
+
+coherent-release-check: coherent-lint coherent-rv32-smoke coherent-gcc-check coherent-herd-check coherent-rtl-litmus-check coherent-litmus-check coherent-random-check coherent-crossover-check coherent-advanced-coverage coherent-assertion-coverage coherent-coverage-edges coherent-formal-prove coherent-mutation-check coherent-code-coverage coherent-coverage-review coherent-performance
+	$(PYTHON) scripts/gen_coherent_coverage.py
+	$(PYTHON) scripts/gen_coherent_dashboard.py
+	$(PYTHON) scripts/gen_metrics.py
+	$(PYTHON) scripts/update_readme_metrics.py
+	$(PYTHON) scripts/check_docs.py
 
 formal:
 	@if command -v sby >/dev/null 2>&1; then sby -f formal/cache_safety.sby; \

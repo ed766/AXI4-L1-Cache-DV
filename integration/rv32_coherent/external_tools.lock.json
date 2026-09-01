@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "tools": [
+    {
+      "name": "opam-bootstrap",
+      "version": "2.4.1",
+      "url": "https://github.com/ocaml/opam/releases/download/2.4.1/opam-2.4.1-x86_64-linux",
+      "sha256": "30da8eb20c8f4cfd3818db867d85f26df1ca5ca27cb25910c0235c5a02e12d3b"
+    },
+    {
+      "name": "libgmp-dev-local",
+      "version": "2:6.3.0+dfsg-2ubuntu6.1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gmp/libgmp-dev_6.3.0%2bdfsg-2ubuntu6.1_amd64.deb",
+      "sha256": "a9847b5ecfff791a46cb198f29a06d9d23a20afdfdd434812f2b44ccfb61d46a"
+    },
+    {
+      "name": "herdtools7",
+      "repository": "https://github.com/herd/herdtools7.git",
+      "revision": "1ca343e16a2038e406d1ac674e7e3a1b722b36c7",
+      "release": "7.58"
+    },
+    {
+      "name": "litmus-tests-riscv",
+      "repository": "https://github.com/litmus-tests/litmus-tests-riscv.git",
+      "revision": "08728edcd99c7e1819d2d4c6789df6d5299ccb69"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+scenario,evidence_class,status,epoch,first_mismatch,event_trace
+precise_load_error,executable_rtl,PASS,1,none,build/coherent/edge_traces/precise_load_error_events.csv
+deferred_store_error_recovery,executable_rtl,PASS,1,none,build/coherent/edge_traces/deferred_store_error_recovery_events.csv
+reset_idle,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_idle_events.csv
+reset_store_pending,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_store_pending_events.csv
+reset_read_outstanding,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_read_outstanding_events.csv
+reset_response_pending,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_response_pending_events.csv
+reset_concurrent_banks,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_concurrent_banks_events.csv
+reset_dirty_owner,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_dirty_owner_events.csv
+reset_failed_store_pending,executable_rtl,PASS,2,none,build/coherent/edge_traces/reset_failed_store_pending_events.csv

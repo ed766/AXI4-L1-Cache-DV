@@ -42,6 +42,17 @@ expected = [
     ("cache_array_bist_summary.csv", "status", "PASS", "Integrated cache-array BIST"),
     ("nonblocking_cache_summary.csv", "status", "PASS", "Optional non-blocking cache"),
     ("nonblocking_cache_coverage.csv", "status", "COVERED", "Non-blocking targeted coverage"),
+    ("coherent_gcc_summary.csv", "status", "PASS", "Dual-RV32 GCC matrix"),
+    ("coherent_rtl_litmus_summary.csv", "status", "PASS", "Executable RTL RVWMO litmus schedules"),
+    ("coherent_herd_summary.csv", "status", "PASS", "Pinned herd7 litmus oracle"),
+    ("coherent_random_summary.csv", "status", "PASS", "Coherent seeded workloads"),
+    ("coherent_crossover_closure_summary.csv", "status", "PASS", "Focused crossover"),
+    ("coherent_advanced_cross_coverage.csv", "status", "COVERED", "Transaction-correlated advanced crosses"),
+    ("coherent_assertion_activation.csv", "status", "ACTIVATED", "Coherent assertion activation"),
+    ("coherent_rtl_mutation_summary.csv", "status", "DETECTED", "Coherent RTL mutations"),
+    ("coherent_error_reset_summary.csv", "status", "PASS", "Coherent error/reset scenarios"),
+    ("coherent_qos_concurrency_summary.csv", "status", "PASS", "Coherent QoS/concurrency scenarios"),
+    ("coherent_performance.csv", "status", "PASS", "Coherent measured RTL performance"),
 ]
 readme = README.read_text()
 for report, key, passing, label in expected:
@@ -68,6 +79,30 @@ if "line" in baseline:
         failures.append(f"README raw line coverage is stale: expected {expected_raw}")
     if expected_reviewed not in readme:
         failures.append(f"README reviewed line coverage is stale: expected {expected_reviewed}")
+
+coherent_functional = rows("coherent_functional_coverage.csv")
+if any(row.get("evidence_class") != "executable_rtl" for row in coherent_functional):
+    failures.append("coherent canonical functional coverage contains non-RTL evidence")
+coherent_crosses = rows("coherent_cross_coverage.csv")
+if any(row.get("evidence_class") != "same_window_executable_rtl" for row in coherent_crosses):
+    failures.append("coherent canonical crosses contain non-RTL or inferred evidence")
+coherent_code = {row["point_type"]: row for row in rows("coherent_code_coverage.csv")}
+if float(coherent_code.get("line", {}).get("percent", 0)) < 90:
+    failures.append("coherent integration line coverage is below 90%")
+if float(coherent_code.get("branch", {}).get("percent", 0)) < 80:
+    failures.append("coherent integration branch coverage is below 80%")
+formal_scopes = {row.get("implementation_scope") for row in rows("coherent_formal_summary.csv")}
+if not {"msi_implementation", "store_buffer_implementation", "reduced_architectural_model"} <= formal_scopes:
+    failures.append("coherent formal evidence does not preserve implementation/model scope distinctions")
+if any(row.get("prove_status") != "PASS" or row.get("cover_status") != "PASS"
+       for row in rows("coherent_formal_summary.csv")):
+    failures.append("coherent formal proof or reachability cover is not passing")
+if any(row.get("evidence_class") != "transaction_correlated_executable_rtl"
+       for row in rows("coherent_advanced_cross_coverage.csv")):
+    failures.append("coherent advanced crosses contain inferred or non-transaction evidence")
+if any(row.get("category") == "executable_and_worth_testing"
+       for row in rows("coherent_code_coverage_holes.csv")):
+    failures.append("coherent coverage review contains an unresolved executable hole")
 
 if failures:
     for failure in failures:

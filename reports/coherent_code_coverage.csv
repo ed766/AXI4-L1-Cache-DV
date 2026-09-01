@@ -1,0 +1,4 @@
+scope,point_type,hit,total,percent,reviewed_exclusions
+coherent_integration_rtl,branch,273,294,92.86,0
+coherent_integration_rtl,line,121,127,95.28,0
+coherent_integration_rtl,toggle,6177,14922,41.40,0

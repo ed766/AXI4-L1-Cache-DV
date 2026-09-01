@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "repository": "ucie_chiplet_soc",
+      "source_revision": "96ecbb1d572f001c1000beb6edf44b4cc6ebcec9",
+      "source": "base_soc/rtl/pd1_rv32/rv32_core.sv",
+      "destination": "integration/rv32_coherent/vendor/rv32/rv32_core.sv",
+      "sha256": "6e4e3a8edea01bb9bae53ecc28f186e712180738226cccdf430ff54f6b4b96b7"
+    },
+    {
+      "repository": "ucie_chiplet_soc",
+      "source_revision": "96ecbb1d572f001c1000beb6edf44b4cc6ebcec9",
+      "source": "chiplet_extension/rtl/firmware/rv32_rom_feeder.sv",
+      "destination": "integration/rv32_coherent/vendor/rv32/rv32_rom_feeder.sv",
+      "sha256": "018528b019d2119b42742664608098915f1b50c4040f460f00a9199677a6a80a"
+    },
+    {
+      "repository": "ucie_chiplet_soc",
+      "source_revision": "96ecbb1d572f001c1000beb6edf44b4cc6ebcec9",
+      "source": "chiplet_extension/scripts/rv32_iss.py",
+      "destination": "integration/rv32_coherent/vendor/rv32/rv32_iss.py",
+      "sha256": "2c39c5fcf5dcfd380edc9679741331b7990c466c6c05a9629d5811dc088187f0"
+    },
+    {
+      "repository": "axi4_qos_fabric_dv",
+      "source_revision": "25fd40691c9052b638f38746528da2d09ddb1e88",
+      "source": "rtl/axi4_qos_fabric.sv",
+      "destination": "integration/rv32_coherent/vendor/axi/axi4_qos_fabric.sv",
+      "sha256": "522a6bd42de05416ee076b90c53b20bd606aaaaaadba070ccec74f3db5071bf7"
+    },
+    {
+      "repository": "axi4_qos_fabric_dv",
+      "source_revision": "25fd40691c9052b638f38746528da2d09ddb1e88",
+      "source": "rtl/qos_arbiter.sv",
+      "destination": "integration/rv32_coherent/vendor/axi/qos_arbiter.sv",
+      "sha256": "8cc6f45f9f194c1101bfc709413968cf6dbf241c0643c50da9bbd89723395396"
+    }
+  ]
+}

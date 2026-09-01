@@ -109,8 +109,61 @@ nb_perf_path = ROOT / "reports" / "nonblocking_cache_performance.csv"
 nb_perf_rows = list(csv.DictReader(nb_perf_path.open())) if nb_perf_path.exists() else []
 nb_windowed = next((row for row in nb_perf_rows if row.get("mode") == "two_mshr_window"), None)
 nb_speedup = f"{nb_windowed['speedup']}x" if nb_windowed else "NA"
+coh_gcc_path = ROOT / "reports" / "coherent_gcc_summary.csv"
+coh_gcc_rows = list(csv.DictReader(coh_gcc_path.open())) if coh_gcc_path.exists() else []
+coh_gcc_pass = sum(row.get("status") == "PASS" for row in coh_gcc_rows)
+coh_litmus_path = ROOT / "reports" / "coherent_rtl_litmus_summary.csv"
+coh_litmus_rows = list(csv.DictReader(coh_litmus_path.open())) if coh_litmus_path.exists() else []
+coh_litmus_pass = sum(row.get("status") == "PASS" for row in coh_litmus_rows)
+coh_herd_path = ROOT / "reports" / "coherent_herd_summary.csv"
+coh_herd_rows = list(csv.DictReader(coh_herd_path.open())) if coh_herd_path.exists() else []
+coh_herd_pass = sum(row.get("status") == "PASS" for row in coh_herd_rows)
+coh_random_path = ROOT / "reports" / "coherent_random_summary.csv"
+coh_random_rows = list(csv.DictReader(coh_random_path.open())) if coh_random_path.exists() else []
+coh_random_pass = sum(row.get("status") == "PASS" for row in coh_random_rows)
+coh_func_path = ROOT / "reports" / "coherent_functional_coverage.csv"
+coh_func_rows = list(csv.DictReader(coh_func_path.open())) if coh_func_path.exists() else []
+coh_func_hit = sum(row.get("status") == "COVERED" for row in coh_func_rows)
+coh_cross_path = ROOT / "reports" / "coherent_cross_coverage.csv"
+coh_cross_rows = list(csv.DictReader(coh_cross_path.open())) if coh_cross_path.exists() else []
+coh_cross_hit = sum(row.get("status") == "COVERED" for row in coh_cross_rows)
+coh_advanced_path = ROOT / "reports" / "coherent_advanced_cross_coverage.csv"
+coh_advanced_rows = list(csv.DictReader(coh_advanced_path.open())) if coh_advanced_path.exists() else []
+coh_advanced_hit = sum(row.get("status") == "COVERED" for row in coh_advanced_rows)
+coh_closure_path = ROOT / "reports" / "coherent_crossover_closure_summary.csv"
+coh_closure_rows = list(csv.DictReader(coh_closure_path.open())) if coh_closure_path.exists() else []
+coh_closure_hit = sum(row.get("status") == "PASS" for row in coh_closure_rows)
+coh_activation_path = ROOT / "reports" / "coherent_assertion_activation.csv"
+coh_activation_rows = list(csv.DictReader(coh_activation_path.open())) if coh_activation_path.exists() else []
+coh_activation_hit = sum(row.get("status") == "ACTIVATED" for row in coh_activation_rows)
+coh_mut_path = ROOT / "reports" / "coherent_rtl_mutation_summary.csv"
+coh_mut_rows = list(csv.DictReader(coh_mut_path.open())) if coh_mut_path.exists() else []
+coh_mut_hit = sum(row.get("status") == "DETECTED" for row in coh_mut_rows)
+coh_formal_path = ROOT / "reports" / "coherent_formal_summary.csv"
+coh_formal_rows = list(csv.DictReader(coh_formal_path.open())) if coh_formal_path.exists() else []
+coh_formal_hit = sum(row.get("prove_status") == "PASS" and row.get("cover_status") == "PASS"
+                     for row in coh_formal_rows)
+coh_ref_path = ROOT / "reports" / "coherent_reference_summary.csv"
+coh_ref_rows = list(csv.DictReader(coh_ref_path.open())) if coh_ref_path.exists() else []
+coh_ref_hit = sum(row.get("status") == "PASS" for row in coh_ref_rows)
+coh_error_path = ROOT / "reports" / "coherent_error_reset_summary.csv"
+coh_error_rows = list(csv.DictReader(coh_error_path.open())) if coh_error_path.exists() else []
+coh_error_hit = sum(row.get("status") == "PASS" for row in coh_error_rows)
+coh_qos_path = ROOT / "reports" / "coherent_qos_concurrency_summary.csv"
+coh_qos_rows = list(csv.DictReader(coh_qos_path.open())) if coh_qos_path.exists() else []
+coh_qos_hit = sum(row.get("status") == "PASS" for row in coh_qos_rows)
+coh_perf_path = ROOT / "reports" / "coherent_performance.csv"
+coh_perf_rows = list(csv.DictReader(coh_perf_path.open())) if coh_perf_path.exists() else []
+coh_perf_hit = sum(row.get("status") == "PASS" for row in coh_perf_rows)
+coh_codecov_path = ROOT / "reports" / "coherent_code_coverage.csv"
+coh_codecov_rows = list(csv.DictReader(coh_codecov_path.open())) if coh_codecov_path.exists() else []
+coh_codecov = {row.get("point_type"): row.get("percent", "NA") for row in coh_codecov_rows}
 assertion_text = (ROOT / "sim" / "assertions" / "dcache_protocol_assertions.sv").read_text()
 assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", assertion_text)))
+coherent_assertion_text = "\n".join(
+    path.read_text() for path in (ROOT / "integration" / "rv32_coherent" / "rtl").glob("*.sv")
+)
+coherent_assertion_count = len(set(re.findall(r"\b(a_[a-zA-Z0-9_]+)\s*:", coherent_assertion_text)))
 machine_metrics = [
     ("directed_regression", f"{passed} / {len(rows)}"),
     ("functional_coverage", f"{coverage_hit} / {len(coverage_rows)}"),
@@ -127,6 +180,23 @@ machine_metrics = [
     ("optional_nonblocking_cache", f"{nb_pass} / {len(nb_rows)}"),
     ("nonblocking_targeted_coverage", f"{nb_cov} / {len(nb_cov_rows)}"),
     ("nonblocking_window_speedup", nb_speedup),
+    ("dual_rv32_gcc_matrix", f"{coh_gcc_pass} / {len(coh_gcc_rows)}"),
+    ("rvwmo_litmus_schedules", f"{coh_litmus_pass} / {len(coh_litmus_rows)}"),
+    ("pinned_herd7_litmus_oracle", f"{coh_herd_pass} / {len(coh_herd_rows)}"),
+    ("coherent_seeded_workloads", f"{coh_random_pass} / {len(coh_random_rows)}"),
+    ("coherent_functional_coverage", f"{coh_func_hit} / {len(coh_func_rows)}"),
+    ("coherent_cross_coverage", f"{coh_cross_hit} / {len(coh_cross_rows)}"),
+    ("coherent_crossover_closure", f"{coh_closure_hit} / {len(coh_closure_rows)}"),
+    ("coherent_advanced_cross_coverage", f"{coh_advanced_hit} / {len(coh_advanced_rows)}"),
+    ("coherent_assertion_activation", f"{coh_activation_hit} / {len(coh_activation_rows)}"),
+    ("coherent_mutations", f"{coh_mut_hit} / {len(coh_mut_rows)}"),
+    ("coherent_formal_groups", f"{coh_formal_hit} / {len(coh_formal_rows)}"),
+    ("coherent_error_reset", f"{coh_error_hit} / {len(coh_error_rows)}"),
+    ("coherent_qos_concurrency", f"{coh_qos_hit} / {len(coh_qos_rows)}"),
+    ("coherent_rtl_performance_rows", f"{coh_perf_hit} / {len(coh_perf_rows)}"),
+    ("coherent_rtl_line_branch_coverage", f"{coh_codecov.get('line', 'NA')}% / {coh_codecov.get('branch', 'NA')}%"),
+    ("coherent_named_assertions", str(coherent_assertion_count)),
+    ("coherent_reference_checks", f"{coh_ref_hit} / {len(coh_ref_rows)}"),
     ("raw_baseline_line_coverage", f"{rtl_line_pct:.2f}%"),
     ("reviewed_baseline_line_coverage", f"{rtl_line_reviewed_pct:.2f}%"),
     ("raw_2way_execution_union_line_coverage", f"{edge_line_pct:.2f}%"),
@@ -173,6 +243,22 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 | Optional non-blocking cache scenarios | {nb_pass} / {len(nb_rows)} |
 | Non-blocking targeted coverage | {nb_cov} / {len(nb_cov_rows)} |
 | Two-entry request-window speedup | {nb_speedup} |
+| Dual-RV32 GCC workload/optimizer matrix | {coh_gcc_pass} / {len(coh_gcc_rows)} |
+| RVWMO litmus schedules without forbidden outcomes | {coh_litmus_pass} / {len(coh_litmus_rows)} |
+| Pinned herd7 external litmus queries | {coh_herd_pass} / {len(coh_herd_rows)} |
+| Seeded coherent shared-memory workloads | {coh_random_pass} / {len(coh_random_rows)} |
+| Coherent functional / same-window cross coverage | {coh_func_hit} / {len(coh_func_rows)}; {coh_cross_hit} / {len(coh_cross_rows)} |
+| Focused executable crossover closure | {coh_closure_hit} / {len(coh_closure_rows)} |
+| Transaction-correlated advanced crosses | {coh_advanced_hit} / {len(coh_advanced_rows)} |
+| Coherent assertion/invariant activation | {coh_activation_hit} / {len(coh_activation_rows)} |
+| Coherent expected-fail mutations detected | {coh_mut_hit} / {len(coh_mut_rows)} |
+| Coherent solver-backed bounded proof/cover groups | {coh_formal_hit} / {len(coh_formal_rows)} |
+| Coherent error/reset scenarios | {coh_error_hit} / {len(coh_error_rows)} |
+| Coherent QoS/concurrency scenarios | {coh_qos_hit} / {len(coh_qos_rows)} |
+| Coherent measured RTL performance rows | {coh_perf_hit} / {len(coh_perf_rows)} |
+| Coherent RTL raw line / branch coverage | {coh_codecov.get('line', 'NA')}% / {coh_codecov.get('branch', 'NA')}% |
+| Coherent named integration assertions | {coherent_assertion_count} |
+| Coherent reference/oracle execution rows | {coh_ref_hit} / {len(coh_ref_rows)} |
 | Named protocol/architecture assertions | {assertion_count} |
 | Optional coverage-edge scenarios | {edge_pass} / {len(edge_rows)} |
 | Design RTL raw line coverage proxy | {line_raw_pair} ({rtl_line_pct:.2f}%) |
@@ -189,6 +275,7 @@ Generated from `reports/regress_summary.csv`. These are behavioral Verilator res
 - UVM is secondary methodology collateral; runtime reporting is limited and separated from closure.
 - SECDED is a separately verified structural variant; the parity baseline remains the canonical cache configuration.
 - The non-blocking cache is a separate two-MSHR implementation; its same-clock cycle comparison is not a silicon-frequency claim.
+- The dual-RV32 crossover is an optional educational MSI/RVWMO lane; it does not alter baseline cache closure or claim ACE/CHI compliance.
 - Formal results are depth-stated bounded safety/error checks plus reachability covers and expected mutation failures, not exhaustive proof of cache correctness.
 - AXI4 behavior is a constrained cache-master subset, not an AXI compliance certification.
 """

@@ -27,6 +27,7 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 | Debug waveform | Expected-failure FST and deterministic SVG evidence | `make debug-waveform` |
 | Optional UVM compile/runtime smoke | Secondary methodology collateral, not closure | `make uvm-runtime-smoke` |
 | Optional non-blocking cache | Two-MSHR concurrency, miss merging, refill ordering, and error containment | `make nonblocking-cache-check` |
+| Dual-RV32 coherent crossover | GCC firmware, per-hart ISS, MSI/store buffers, AXI QoS transport, RVWMO litmus checks, mutations, formal, and performance | `make coherent-release-check` |
 
 ## Required Scenario Families
 
@@ -40,6 +41,7 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - RAS: single-bit data/code correction, read scrub, double-bit detection, corrected dirty eviction and maintenance, and uncorrectable dirty-line containment.
 - Coherence extension: shared reads, write invalidation, modified-owner intervention, dirty conflict eviction, simultaneous requester serialization, and stale-data prevention.
 - BIST extension: clean March C-minus, stuck-at-zero/one faults at boundary and middle addresses, functional-port ownership, and reset recovery.
+- Coherent crossover: GCC producer/consumer workloads, 400 executable fenced/unfenced litmus schedules checked against exact herd7 sets, store forwarding/bypass, simultaneous enqueue/drain/error behavior, two-bank concurrency, QoS/aging, dirty intervention, invalidation, precise/deferred errors, dirty/faulted reset epochs, and seeded operational exploration.
 
 ## Release Targets
 
@@ -57,5 +59,6 @@ Verify cache data integrity, replacement/writeback behavior, AXI4 channel correc
 - Every implemented bug mutation is detected by a test, assertion, or scoreboard.
 - The optional SECDED variant must close all seven RAS points without changing parity-baseline closure metrics.
 - Optional MSI and SRAM-BIST results remain separately reported and must not inflate the baseline `21 / 21` feature-coverage model.
+- The dual-RV32 lane must close `24 / 24` GCC runs, `400 / 400` executable RTL schedules, `50 / 50` supplemental model seeds, `34 / 34` focused crossover scenarios, `64 / 64` functional points, `48 / 48` canonical and `48 / 48` advanced crosses, `20 / 20` assertion activations, `10 / 10` formal groups, `17 / 17` RTL mutations, and coherent raw line/branch coverage above `90% / 80%` without changing baseline closure.
 
 Current results must be read from generated reports; targets are not presented as completed results.

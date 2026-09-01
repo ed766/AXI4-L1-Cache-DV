@@ -1,0 +1,9 @@
+mutation,status,detection_bucket
+skipped_invalidation,DETECTED,data_scoreboard
+stale_intervention_data,DETECTED,data_scoreboard
+illegal_dual_modified,DETECTED,coherence_invariant
+dropped_buffered_store,DETECTED,final_memory
+broken_forwarding,DETECTED,forwarding_checker
+early_fence_completion,DETECTED,fence_order_assertion
+response_hart_corruption,DETECTED,ownership_checker
+axi_home_id_corruption,DETECTED,ownership_checker

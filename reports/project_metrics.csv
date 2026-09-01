@@ -14,6 +14,23 @@ integrated_cache_array_bist,2 / 2
 optional_nonblocking_cache,11 / 11
 nonblocking_targeted_coverage,12 / 12
 nonblocking_window_speedup,2.080x
+dual_rv32_gcc_matrix,24 / 24
+rvwmo_litmus_schedules,400 / 400
+pinned_herd7_litmus_oracle,16 / 16
+coherent_seeded_workloads,50 / 50
+coherent_functional_coverage,64 / 64
+coherent_cross_coverage,48 / 48
+coherent_crossover_closure,34 / 34
+coherent_advanced_cross_coverage,48 / 48
+coherent_assertion_activation,20 / 20
+coherent_mutations,17 / 17
+coherent_formal_groups,10 / 10
+coherent_error_reset,9 / 9
+coherent_qos_concurrency,6 / 6
+coherent_rtl_performance_rows,80 / 80
+coherent_rtl_line_branch_coverage,95.28% / 92.86%
+coherent_named_assertions,18
+coherent_reference_checks,895 / 895
 raw_baseline_line_coverage,69.01%
 reviewed_baseline_line_coverage,96.43%
 raw_2way_execution_union_line_coverage,76.06%

@@ -15,3 +15,11 @@ The SymbiYosys harness separates DUT guarantees from AXI environment assumptions
 Properties cover request/response accounting, dirty-writeback ordering, refill/writeback error containment, final-beat write semantics, invalid-way preference, and maintenance exclusion. Reachability tasks exercise hits, misses, dirty evictions, error responses, and maintenance completion; mutation tasks demonstrate checker sensitivity.
 
 The `small_1way` and `small_2way` rows are reduced-geometry bounded proof evidence. All results are depth-stated open-source checks, not exhaustive cache correctness or commercial formal signoff.
+
+## Dual-RV32 Coherent Leaf Proofs
+
+The optional coherent crossover adds ten depth-20 solver-backed safety/cover groups. Seven bind reduced instances of the implemented MSI and store-buffer RTL; three use reduced architectural models for publication freshness, response ownership, and reset epochs because the installed Yosys frontend cannot flatten the full multidimensional AXI fabric hierarchy. Nine groups close with inductive `prove` tasks. Failed-store-head preservation is honestly reported as reset-reachable bounded safety because its memory invariant does not close induction from arbitrary unreachable states. All `10 / 10` groups and their non-vacuous covers pass, and `proof_mode` plus `implementation_scope` in `reports/coherent_formal_summary.csv` preserve these distinctions.
+
+The failed-store group exposed a real simultaneous enqueue/error occupancy defect. The design was corrected, an executable regression was added, and an expected-fail mutation restores the original logic to demonstrate detection.
+
+These are deliberately reduced leaf/control models. They complement simulation and RVWMO outcome checking; they are not an exhaustive proof of the complete dual-core, MSI, AXI, or firmware state space.

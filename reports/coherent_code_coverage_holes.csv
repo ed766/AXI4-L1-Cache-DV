@@ -1,0 +1,8 @@
+point_type,rtl_file,line,signal_or_branch,hit_count,category,review_rationale
+branch,integration/rv32_coherent/rtl/coherent_axi_qos_transport.sv,224,if,0,structurally_unreachable_in_adapter,one-active-request-per-hart adapter cannot sustain fabric-level aging; leaf arbiter aging is executed separately
+branch,integration/rv32_coherent/rtl/coherent_axi_qos_transport.sv,228,if,0,mutation_only_failure_path,reset ghost hold is activated only by the expected-fail reset-epoch mutation
+branch,integration/rv32_coherent/rtl/coherent_axi_qos_transport.sv,231,else,0,impractical_diagnostic_saturation,requires 4095 consecutive active cycles; bounded-progress scenarios reset the watchdog normally
+line,integration/rv32_coherent/rtl/dual_hart_apb_store_buffer.sv,129,else,0,verilator_instrumentation_artifact,shared-access body is executed by read/write traces; uncovered point is the generated else token
+branch,rtl/coherence/msi_two_cache_subsystem.sv,227,else,0,structurally_unreachable_in_adapter,"integrated transport keeps the accepted home response ready, so the response-hold alternative is inactive"
+branch,rtl/coherence/msi_two_cache_subsystem.sv,231,else,0,structurally_unreachable_in_adapter,"integrated transport keeps the accepted home response ready, so the response-hold alternative is inactive"
+line,rtl/coherence/msi_two_cache_subsystem.sv,235,case,0,defensive_default_unreachable,legal enum transitions cannot enter the default control-state arm

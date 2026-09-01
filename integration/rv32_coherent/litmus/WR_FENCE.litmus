@@ -1,0 +1,11 @@
+RISCV WR_FENCE
+{
+0:x5=x; 0:x6=y; 0:x7=z;
+1:x5=x; 1:x6=y; 1:x7=z;
+}
+ P0                     | P1                     ;
+ li x10,1               | li x10,1               ;
+ sw x10,0(x5)           | sw x10,0(x6)           ;
+ fence rw,rw            | fence rw,rw            ;
+ lw x8,0(x5)            | lw x8,0(x6)            ;
+exists (0:x8=0 /\ 1:x8=0)

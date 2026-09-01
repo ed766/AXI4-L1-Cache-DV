@@ -1,0 +1,2 @@
+scenario,workload,optimization,status,cycles,retirements,cpi,forwarded_loads,bypassed_loads,drained_stores,invalidations,interventions,dirty_writebacks,axi_wait_cycles,simultaneous_bank_cycles,grants_h0,grants_h1,age_overrides,reset_epoch,first_mismatch,trace,event_trace,enriched_trace
+producer_consumer_smoke,0,-O2,PASS,168,73,2.301,0,1,1,0,1,0,0,0,1,1,0,1,none,build/coherent/traces/producer_consumer_smoke.csv,build/coherent/event_traces/producer_consumer_smoke.csv,build/coherent/event_traces/producer_consumer_smoke_enriched.jsonl

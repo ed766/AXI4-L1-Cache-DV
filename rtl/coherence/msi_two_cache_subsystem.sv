@@ -37,6 +37,12 @@ module msi_two_cache_subsystem #(
   output logic [31:0] stat_invalidations,
   output logic [31:0] stat_interventions,
   output logic [31:0] stat_dirty_writebacks
+`ifdef FORMAL_OBSERVE
+  , output logic [1:0][LINES-1:0][1:0] formal_line_state
+  , output logic [1:0][LINES-1:0][32-$clog2(LINES)-($clog2(WORDS_PER_LINE)+2)-1:0] formal_line_tag
+  , output logic [1:0] formal_ctrl_state
+  , output logic formal_dirty_victim
+`endif
 );
   localparam int INDEX_W = $clog2(LINES);
   localparam int OFFSET_W = $clog2(WORDS_PER_LINE) + 2;
@@ -58,6 +64,20 @@ module msi_two_cache_subsystem #(
   logic [TAG_W-1:0] line_tag [0:1][0:LINES-1];
   logic [31:0] line_data [0:1][0:LINES-1][0:WORDS_PER_LINE-1];
   logic [31:0] backing_mem [0:MEM_WORDS-1];
+
+`ifdef FORMAL_OBSERVE
+  always_comb begin
+    formal_ctrl_state = ctrl_state;
+    formal_dirty_victim = ctrl_state == CTRL_EXECUTE && !local_hit &&
+                          line_state[req_owner_q][req_index] == MSI_M;
+    for (int formal_cache = 0; formal_cache < 2; formal_cache++) begin
+      for (int formal_line = 0; formal_line < LINES; formal_line++) begin
+        formal_line_state[formal_cache][formal_line] = line_state[formal_cache][formal_line];
+        formal_line_tag[formal_cache][formal_line] = line_tag[formal_cache][formal_line];
+      end
+    end
+  end
+`endif
 
   wire [INDEX_W-1:0] req_index = req_addr_q[OFFSET_W + INDEX_W - 1:OFFSET_W];
   wire [$clog2(WORDS_PER_LINE)-1:0] req_word = req_addr_q[OFFSET_W-1:2];
@@ -132,11 +152,13 @@ module msi_two_cache_subsystem #(
         CTRL_EXECUTE: begin
           // A modified victim is committed before its slot is reused.
           if (!local_hit && line_state[req_owner_q][req_index] == MSI_M) begin
+`ifndef COH_MUT_SKIP_DIRTY_VICTIM_WB
             for (word_index = 0; word_index < WORDS_PER_LINE; word_index++)
               backing_mem[({line_tag[req_owner_q][req_index], req_index,
                             {OFFSET_W{1'b0}}} >> 2) + word_index] <=
                   line_data[req_owner_q][req_index][word_index];
             stat_dirty_writebacks <= stat_dirty_writebacks + 1'b1;
+`endif
           end
 
           if (!local_hit) begin
@@ -155,8 +177,13 @@ module msi_two_cache_subsystem #(
 `endif
               end
               for (word_index = 0; word_index < WORDS_PER_LINE; word_index++)
+`ifdef COH_MUT_STALE_INTERVENTION
+                line_data[req_owner_q][req_index][word_index] <=
+                    backing_mem[(req_line_base >> 2) + word_index];
+`else
                 line_data[req_owner_q][req_index][word_index] <=
                     line_data[req_other][req_index][word_index];
+`endif
             end else begin
               for (word_index = 0; word_index < WORDS_PER_LINE; word_index++)
                 line_data[req_owner_q][req_index][word_index] <=
